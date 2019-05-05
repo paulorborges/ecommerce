@@ -16,10 +16,12 @@
 		public function __construct($opts = array()){
 			/* no Merge é importante a ordem, no formato abaixo, os conflitos entre o opts e defaults, vale o opts*/
 			$this->options=array_merge($this->defaults,$opts);
+			/* variável dir para armazenamento do caminho padrão */
+			$dir = $_SERVER["DOCUMENT_ROOT"]."/ecommerce/";
 			// config
 			$config = array(
-				"tpl_dir" => $_SERVER["DOCUMENT_ROOT"]."/views/",
-				"cache_dir" => $_SERVER["DOCUMENT_ROOT"]."/views-cache/",
+				"tpl_dir" => $dir."views/",
+				"cache_dir" => $dir."views-cache/",
 				"debug" => true // set to false to improve the speed
 			 );
 
@@ -36,7 +38,7 @@
 		}
 		//Método destrutor
 		public function __destruct(){
-			$this->tlp->draw("footer");
+			$this->tpl->draw("footer");
 		}
 	}
 ?>
