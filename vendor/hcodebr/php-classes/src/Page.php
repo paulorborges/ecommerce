@@ -13,13 +13,13 @@
 			}
 		}
 		//Método construtor
-		public function __construct($opts = array(),$tpl_dir = "/ecommerce/views/"){
+		public function __construct($opts = array(),$tpl_dir = "/views/"){
 			/* no Merge é importante a ordem, no formato abaixo, os conflitos entre o opts e defaults, vale o opts*/
 			$this->options=array_merge($this->defaults,$opts);
 			// config
 			$config = array(
 				"tpl_dir" => $_SERVER["DOCUMENT_ROOT"].$tpl_dir,
-				"cache_dir" => $_SERVER["DOCUMENT_ROOT"]."/ecommerce/views-cache/",
+				"cache_dir" => $_SERVER["DOCUMENT_ROOT"]."/views-cache/",
 				"debug" => true // set to false to improve the speed
 			 );
 
