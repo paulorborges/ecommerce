@@ -1,35 +1,6 @@
 CREATE DATABASE  IF NOT EXISTS `db_ecommerce` /*!40100 DEFAULT CHARACTER SET utf8 */;
 USE `db_ecommerce`;
 
-DROP TABLE IF EXISTS `tb_persons`;
-
-CREATE TABLE `tb_persons` (
-  `idperson` int(11) NOT NULL AUTO_INCREMENT,
-  `desperson` varchar(64) NOT NULL,
-  `desemail` varchar(128) DEFAULT NULL,
-  `nrphone` bigint(20) DEFAULT NULL,
-  `dtregister` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  PRIMARY KEY (`idperson`)
-) ENGINE=InnoDB AUTO_INCREMENT=8 DEFAULT CHARSET=utf8;
-
-INSERT INTO `tb_persons` VALUES (1,'JoÃ£o Rangel','admin@hcode.com.br',2147483647,'2017-03-01 03:00:00'),(7,'Suporte','suporte@hcode.com.br',1112345678,'2017-03-15 16:10:27');
-
-DROP TABLE IF EXISTS `tb_users`;
-
-CREATE TABLE `tb_users` (
-  `iduser` int(11) NOT NULL AUTO_INCREMENT,
-  `idperson` int(11) NOT NULL,
-  `deslogin` varchar(64) NOT NULL,
-  `despassword` varchar(256) NOT NULL,
-  `inadmin` tinyint(4) NOT NULL DEFAULT '0',
-  `dtregister` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  PRIMARY KEY (`iduser`),
-  KEY `FK_users_persons_idx` (`idperson`),
-  CONSTRAINT `fk_users_persons` FOREIGN KEY (`idperson`) REFERENCES `tb_persons` (`idperson`) ON DELETE NO ACTION ON UPDATE NO ACTION
-) ENGINE=InnoDB AUTO_INCREMENT=8 DEFAULT CHARSET=utf8;
-
-INSERT INTO `tb_users` VALUES (1,1,'admin','$2y$12$YlooCyNvyTji8bPRcrfNfOKnVMmZA9ViM2A3IpFjmrpIbp5ovNmga',1,'2017-03-13 03:00:00'),(7,7,'suporte','$2y$12$HFjgUm/mk1RzTy4ZkJaZBe0Mc/BA2hQyoUckvm.lFa6TesjtNpiMe',1,'2017-03-15 16:10:27');
-
 DROP TABLE IF EXISTS `tb_addresses`;
 
 CREATE TABLE `tb_addresses` (
@@ -63,6 +34,22 @@ CREATE TABLE `tb_carts` (
   CONSTRAINT `fk_carts_users` FOREIGN KEY (`iduser`) REFERENCES `tb_users` (`iduser`) ON DELETE NO ACTION ON UPDATE NO ACTION
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 
+DROP TABLE IF EXISTS `tb_cartsproducts`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `tb_cartsproducts` (
+  `idcartproduct` int(11) NOT NULL AUTO_INCREMENT,
+  `idcart` int(11) NOT NULL,
+  `idproduct` int(11) NOT NULL,
+  `dtremoved` datetime NOT NULL,
+  `dtregister` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`idcartproduct`),
+  KEY `FK_cartsproducts_carts_idx` (`idcart`),
+  KEY `FK_cartsproducts_products_idx` (`idproduct`),
+  CONSTRAINT `fk_cartsproducts_carts` FOREIGN KEY (`idcart`) REFERENCES `tb_carts` (`idcart`) ON DELETE NO ACTION ON UPDATE NO ACTION,
+  CONSTRAINT `fk_cartsproducts_products` FOREIGN KEY (`idproduct`) REFERENCES `tb_products` (`idproduct`) ON DELETE NO ACTION ON UPDATE NO ACTION
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+
 DROP TABLE IF EXISTS `tb_categories`;
 
 CREATE TABLE `tb_categories` (
@@ -71,6 +58,48 @@ CREATE TABLE `tb_categories` (
   `dtregister` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (`idcategory`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+
+DROP TABLE IF EXISTS `tb_orders`;
+
+CREATE TABLE `tb_orders` (
+  `idorder` int(11) NOT NULL AUTO_INCREMENT,
+  `idcart` int(11) NOT NULL,
+  `iduser` int(11) NOT NULL,
+  `idstatus` int(11) NOT NULL,
+  `vltotal` decimal(10,2) NOT NULL,
+  `dtregister` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`idorder`),
+  KEY `FK_orders_carts_idx` (`idcart`),
+  KEY `FK_orders_users_idx` (`iduser`),
+  KEY `fk_orders_ordersstatus_idx` (`idstatus`),
+  CONSTRAINT `fk_orders_carts` FOREIGN KEY (`idcart`) REFERENCES `tb_carts` (`idcart`) ON DELETE NO ACTION ON UPDATE NO ACTION,
+  CONSTRAINT `fk_orders_ordersstatus` FOREIGN KEY (`idstatus`) REFERENCES `tb_ordersstatus` (`idstatus`) ON DELETE NO ACTION ON UPDATE NO ACTION,
+  CONSTRAINT `fk_orders_users` FOREIGN KEY (`iduser`) REFERENCES `tb_users` (`iduser`) ON DELETE NO ACTION ON UPDATE NO ACTION
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+
+DROP TABLE IF EXISTS `tb_ordersstatus`;
+
+CREATE TABLE `tb_ordersstatus` (
+  `idstatus` int(11) NOT NULL AUTO_INCREMENT,
+  `desstatus` varchar(32) NOT NULL,
+  `dtregister` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`idstatus`)
+) ENGINE=InnoDB AUTO_INCREMENT=5 DEFAULT CHARSET=utf8;
+
+INSERT INTO `tb_ordersstatus` VALUES (1,'Em Aberto','2017-03-13 03:00:00'),(2,'Aguardando Pagamento','2017-03-13 03:00:00'),(3,'Pago','2017-03-13 03:00:00'),(4,'Entregue','2017-03-13 03:00:00');
+
+DROP TABLE IF EXISTS `tb_persons`;
+
+CREATE TABLE `tb_persons` (
+  `idperson` int(11) NOT NULL AUTO_INCREMENT,
+  `desperson` varchar(64) NOT NULL,
+  `desemail` varchar(128) DEFAULT NULL,
+  `nrphone` bigint(20) DEFAULT NULL,
+  `dtregister` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`idperson`)
+) ENGINE=InnoDB AUTO_INCREMENT=8 DEFAULT CHARSET=utf8;
+
+INSERT INTO `tb_persons` VALUES (1,'JoÃ£o Rangel','admin@hcode.com.br',2147483647,'2017-03-01 03:00:00'),(7,'Suporte','suporte@hcode.com.br',1112345678,'2017-03-15 16:10:27');
 
 DROP TABLE IF EXISTS `tb_products`;
 
@@ -100,52 +129,21 @@ CREATE TABLE `tb_productscategories` (
   CONSTRAINT `fk_productscategories_products` FOREIGN KEY (`idproduct`) REFERENCES `tb_products` (`idproduct`) ON DELETE NO ACTION ON UPDATE NO ACTION
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 
-DROP TABLE IF EXISTS `tb_cartsproducts`;
-/*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!40101 SET character_set_client = utf8 */;
-CREATE TABLE `tb_cartsproducts` (
-  `idcartproduct` int(11) NOT NULL AUTO_INCREMENT,
-  `idcart` int(11) NOT NULL,
-  `idproduct` int(11) NOT NULL,
-  `dtremoved` datetime NOT NULL,
+DROP TABLE IF EXISTS `tb_users`;
+
+CREATE TABLE `tb_users` (
+  `iduser` int(11) NOT NULL AUTO_INCREMENT,
+  `idperson` int(11) NOT NULL,
+  `deslogin` varchar(64) NOT NULL,
+  `despassword` varchar(256) NOT NULL,
+  `inadmin` tinyint(4) NOT NULL DEFAULT '0',
   `dtregister` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  PRIMARY KEY (`idcartproduct`),
-  KEY `FK_cartsproducts_carts_idx` (`idcart`),
-  KEY `FK_cartsproducts_products_idx` (`idproduct`),
-  CONSTRAINT `fk_cartsproducts_carts` FOREIGN KEY (`idcart`) REFERENCES `tb_carts` (`idcart`) ON DELETE NO ACTION ON UPDATE NO ACTION,
-  CONSTRAINT `fk_cartsproducts_products` FOREIGN KEY (`idproduct`) REFERENCES `tb_products` (`idproduct`) ON DELETE NO ACTION ON UPDATE NO ACTION
-) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+  PRIMARY KEY (`iduser`),
+  KEY `FK_users_persons_idx` (`idperson`),
+  CONSTRAINT `fk_users_persons` FOREIGN KEY (`idperson`) REFERENCES `tb_persons` (`idperson`) ON DELETE NO ACTION ON UPDATE NO ACTION
+) ENGINE=InnoDB AUTO_INCREMENT=8 DEFAULT CHARSET=utf8;
 
-DROP TABLE IF EXISTS `tb_ordersstatus`;
-
-CREATE TABLE `tb_ordersstatus` (
-  `idstatus` int(11) NOT NULL AUTO_INCREMENT,
-  `desstatus` varchar(32) NOT NULL,
-  `dtregister` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  PRIMARY KEY (`idstatus`)
-) ENGINE=InnoDB AUTO_INCREMENT=5 DEFAULT CHARSET=utf8;
-
-INSERT INTO `tb_ordersstatus` VALUES (1,'Em Aberto','2017-03-13 03:00:00'),(2,'Aguardando Pagamento','2017-03-13 03:00:00'),(3,'Pago','2017-03-13 03:00:00'),(4,'Entregue','2017-03-13 03:00:00');
-
-
-DROP TABLE IF EXISTS `tb_orders`;
-
-CREATE TABLE `tb_orders` (
-  `idorder` int(11) NOT NULL AUTO_INCREMENT,
-  `idcart` int(11) NOT NULL,
-  `iduser` int(11) NOT NULL,
-  `idstatus` int(11) NOT NULL,
-  `vltotal` decimal(10,2) NOT NULL,
-  `dtregister` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  PRIMARY KEY (`idorder`),
-  KEY `FK_orders_carts_idx` (`idcart`),
-  KEY `FK_orders_users_idx` (`iduser`),
-  KEY `fk_orders_ordersstatus_idx` (`idstatus`),
-  CONSTRAINT `fk_orders_carts` FOREIGN KEY (`idcart`) REFERENCES `tb_carts` (`idcart`) ON DELETE NO ACTION ON UPDATE NO ACTION,
-  CONSTRAINT `fk_orders_ordersstatus` FOREIGN KEY (`idstatus`) REFERENCES `tb_ordersstatus` (`idstatus`) ON DELETE NO ACTION ON UPDATE NO ACTION,
-  CONSTRAINT `fk_orders_users` FOREIGN KEY (`iduser`) REFERENCES `tb_users` (`iduser`) ON DELETE NO ACTION ON UPDATE NO ACTION
-) ENGINE=InnoDB DEFAULT CHARSET=utf8;
-
+INSERT INTO `tb_users` VALUES (1,1,'admin','$2y$12$YlooCyNvyTji8bPRcrfNfOKnVMmZA9ViM2A3IpFjmrpIbp5ovNmga',1,'2017-03-13 03:00:00'),(7,7,'suporte','$2y$12$HFjgUm/mk1RzTy4ZkJaZBe0Mc/BA2hQyoUckvm.lFa6TesjtNpiMe',1,'2017-03-15 16:10:27');
 
 DROP TABLE IF EXISTS `tb_userslogs`;
 

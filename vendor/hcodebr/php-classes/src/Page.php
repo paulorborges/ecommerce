@@ -5,6 +5,8 @@
 		private $tpl;
 		private $options = [];
 		private $defaults = [
+			"header"=>true,
+			"footer"=>true,
 			"data"=>[]
 		];
 		private function setData ($data = array()){
@@ -26,7 +28,9 @@
 			Tpl::configure( $config );
 			$this->tpl = new Tpl;
 			$this->setData($this->options["data"]);
-			$this->tpl->draw("header");
+			/* como existem páginas que utilizam o header e outras não, necessário validar se os parâmetros enviados 
+			pela chamada do método vieram como true ou false antes de realizar a operação */
+			if ($this->options["header"] === true) $this->tpl->draw("header");
 		}
 
 		/* método para corpo da página */
@@ -36,7 +40,9 @@
 		}
 		//Método destrutor
 		public function __destruct(){
-			$this->tpl->draw("footer");
+			/* como existem páginas que utilizam o footer e outras não, necessário validar se os parâmetros enviados 
+			pela chamada do método vieram como true ou false antes de realizar a operação */
+			if ($this->options["footer"] === true) $this->tpl->draw("footer");
 		}
 	}
 ?>
