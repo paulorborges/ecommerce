@@ -75,6 +75,62 @@ class User extends Model{
         /* Em caso de haver mais sessions rodando, pode ser chamado o destroy apenas para a session de usuario */
         $_SESSION[User::SESSION] = NULL;
     }
+
+    /* Método para listar os usuários */
+    public static function listAll(){
+        $sql = new Sql();
+        return $sql->select("SELECT * FROM tb_users a INNER JOIN tb_persons b USING(idperson) ORDER BY b.desperson");
+    }
+    /* Método para salvar as variáveis no banco */
+    public function save(){
+        $sql = new Sql();
+        /* chamada da procedure. os campos devem ser enviados na mesma ordem da procedure */
+        $results = $sql->select("CALL sp_users_save(:desperson, :deslogin, :despassword, :desemail, :nrphone, :inadmin)", array(
+            ":desperson"=>$this->getdesperson(),
+            ":deslogin"=>$this->getdeslogin(),
+            ":despassword"=>$this->getdespassword(),
+            ":desemail"=>$this->getdesemail(),
+            ":nrphone"=>$this->getnrphone(),
+            ":inadmin"=>$this->getinadmin()
+        ));
+        /* apesar de ser um array, é necessário apenas a primeira posição, ou seja, zero. Sendo assim, é enviado para o 
+        setData a posição zero do results. */
+        $this->setData($results[0]);
+    }
+    /* Método para capturar todos os elementos de um usuário conforme seu ID. */
+    public function get($iduser){
+        $sql = new Sql();
+        $results = $sql->select("SELECT * FROM tb_users a INNER JOIN tb_persons b USING (idperson) WHERE a.iduser = :iduser", array(
+            ":iduser" => $iduser
+        ));
+        /* Como o objeto results recebe um array em seu retorno, necessário enviar par ao setData apenas a posição zero. */
+        $this->setData($results[0]);
+    }
+    /* Método para alteração dos dados */
+    public function update(){
+        $sql = new Sql();
+        /* chamada da procedure. os campos devem ser enviados na mesma ordem da procedure */
+        $results = $sql->select("CALL sp_usersupdate_save(:iduser, :desperson, :deslogin, :despassword, :desemail, :nrphone, :inadmin)", array(
+            ":iduser"=>$this->getiduser(),
+            ":desperson"=>$this->getdesperson(),
+            ":deslogin"=>$this->getdeslogin(),
+            ":despassword"=>$this->getdespassword(),
+            ":desemail"=>$this->getdesemail(),
+            ":nrphone"=>$this->getnrphone(),
+            ":inadmin"=>$this->getinadmin()
+        ));
+        /* apesar de ser um array, é necessário apenas a primeira posição, ou seja, zero. Sendo assim, é enviado para o 
+        setData a posição zero do results. */
+        $this->setData($results[0]);
+    }
+    /* Método para apagar os dados */
+    public function delete(){
+        $sql = new Sql();
+        $sql -> query("CALL sp_users_delete(:iduser)", array(
+            ":iduser"=>$this->getiduser()
+        ));
+
+    }
 }
 
 ?>
