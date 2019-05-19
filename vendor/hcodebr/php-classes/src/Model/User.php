@@ -3,10 +3,16 @@
 namespace Hcode\Model;
 
 use \Hcode\Model;
+use \Hcode\Mailer;
 use \Hcode\DB\Sql;
 
 class User extends Model{
+
     const SESSION = "User";
+    /* constante para chave de criptografia */
+    const SECRET    = "HcodePHP7_Secret"; //16 caracteres
+    const SECRET_IV = "FrisaComunicacao"; //16 caracteres
+
     public static function login($login,$password){
         $sql = new Sql();
         $results = $sql->select("SELECT * FROM tb_users WHERE deslogin = :LOGIN", array(
@@ -130,6 +136,154 @@ class User extends Model{
             ":iduser"=>$this->getiduser()
         ));
 
+    }
+    /* Método para recuperação de senha */
+    public static function getForgot($email){
+        /* Verificar se o e-mail está cadastrado no banco de dados */
+        $sql = new Sql();
+        $results = $sql->select(
+            "SELECT * 
+            FROM tb_persons a 
+            INNER JOIN tb_users b 
+            USING (idperson) 
+            WHERE a.desemail = :email;
+            ", array(
+                ":email"=>$email
+            )
+        );
+        /* se não houver retorno no results, quer dizer que não encontrou o email, função abaixo. A mensagem abaixo
+        não deve ser utilizada em ambiente oficial uma vez que permite que o usuário mal intencionado faça novos testes.
+        Importante colocar mensagens com códigos ou informações que apenas você entenda o erro. */
+        if(count($results) === 0){
+            throw new \Exception("Não foi possível identificar o email!");
+        } else {
+            /* se não for igual a zero, quer dizer que encontrou o email em questão. A informação é guardada em uma variável
+            presente nesse escopo para o correto tratamento. */
+            $data = $results[0];
+            //var_dump ($data);
+            /* Nesse ponto é importante registrar no banco de dados quais usuários estão tentando recuperar a senha, 
+            de que IP ele fez a tentativa, entre outras funções. Para isso, foi criado uma nova procedure conforme 
+            utilização abaixo. A procedure em questão recebe alguns parametros para o seu funcionamento. */
+            $resultsRecovery = $sql->select("CALL sp_userspasswordsrecoveries_create(:iduser, :desip)", array(
+                ":iduser"=>$data["iduser"],
+                /* para pegar o ip do usuário $server addr */
+                ":desip"=>$_SERVER["REMOTE_ADDR"]
+            ));
+            //var_dump ($resultsRecovery);
+            /* Caso o resultsRecover não tenha sido criado, haverá um problema na estrutura. Importante portanto verificar
+            se existe informações associadas conforme abaixo. Assim como na observação anterior, importante ajustar a mensagem
+            de erro de modo a não permitir que o usuário identique facilmente o erro e promova novas tentativas. */
+            if (count($resultsRecovery) === 0){
+                throw new \Exception("Não foi possível recuperar a senha!");
+            } else {
+                $dataRecovery = $resultsRecovery[0];
+                //var_dump ($dataRecovery);
+                /* Como a procedure vai retornar o idrecovey que foi a chave primária gerada automaticamente, autoincrement
+                que foi gerada no banco de dados. Vamos capturar esse número, criptografar e enviar como link no e-mail para
+                evitar que usuário mal intencionado tente outros códigos. */
+                /*
+                $code = base64_encode(mcrypt_encrypt(
+                    MCRYPT_RIJNDAEL_128, 
+                    User::SECRET, 
+                    $dataRecovery["idrecovery"], 
+                    MCRYPT_MODE_ECB)
+                );
+                echo $code;
+                */
+                /* como o mcrypt foi descontinuada nas versões 7.0 do php em diante, segue outra opção de criptografia. */
+                $code = base64_encode(openssl_encrypt(
+                    /*conversão para string afim de ser encriptado */
+                    json_encode($dataRecovery),
+                    /* algoritimo de criptografia */
+                    'AES-128-CBC', 
+                    /* primeira chave a ser encriptada */
+                    User::SECRET,
+                    /* o zero encripta e não precisa retornar nada */
+                    0,
+                    /* segunda chave a ser encriptada */
+                    User::SECRET_IV
+                ));
+                //echo $code;
+                //$string = openssl_decrypt($openssl, 'AES-128-CBC', SECRET, 0, SECRET_IV);
+                //echo "<br>";
+                //var_dump(json_decode($string, true));
+                /* Após criptografado, necessário montar o link */
+                $link = "http://www.hcodecommerce.com.br/admin/forgot/reset?code=$code";
+                //echo $link;
+
+                $subj = "Redefinir senha da Frisa Comunicacao";
+                $mailer = new Mailer(
+                    /* email para recuperação da senha. Endereco de destino. */
+                    $data["desemail"],
+                    /* nome da pessoa */
+                    $data["desperson"], 
+                    /* assunto da mensagem */
+                    $subj, 
+                    /* nome do template dentro da pasta views\email */
+                    "forgot", array(
+                        "name"=>$data["desperson"],
+                        "link"=>$link
+                    )
+                );
+                $mailer->send();
+                return $data;
+
+                /* segue abaixo duas chaves, em 16 bits */
+                //define('SECRET_IV', pack ('a16', 'senha'));
+                //define('SECRET', pack('a16','senha'));
+                /* mesmo array para ser encriptado */
+                //$data = [
+                //    "idRecovery"=>"$dataRecovery"
+                //];
+
+                //$openssl = openssl_encrypt(
+                    /*conversão para string afim de ser encriptado */
+                //    json_encode($data), 
+                    /* algoritimo de criptografia */
+                //    'AES-128-CBC', 
+                    /* primeira chave a ser encriptada */
+                //    SECRET,
+                    /* o zero encripta e não precisa retornar nada */
+                //    0,
+                    /* segunda chave a ser encriptada */
+                //    SECRET_IV
+                //);
+                //echo $openssl;
+                /* para fazer o processo inverso, decrypt, segue instruções abaixo */
+                /*
+                $string = openssl_decrypt($openssl, 'AES-128-CBC', SECRET, 0, SECRET_IV);
+                echo "<br>";
+                var_dump(json_decode($string, true));
+                */
+
+
+            }
+        }
+    }
+    /* Método para descriptograr a senha*/
+    public static function validForgotDecrypt($code){
+        $idRecovery = mcrypt_decrypt(MCRYPT_RIJNDAEL_128, User::SECRET, base64_decode($code), MCRYPT_MODE_ECB);
+        $sql = new Sql();
+        /* dtrecovery é null porque ainda não foi utilizado. dtregister mostra a informação que foi gerado e essa data somada a 1 hora
+        precisa ser menor ou igual 1 hora para permitir o funcionamento. */
+        $results = $sql->select ("
+            SELECT * FROM tb_userspasswordsrecoveries a
+            INNER JOIN tb_users b USING(iduser)
+            INNER JOIN tb_persons c USING(idperson)
+            WHERE
+                a.idrecovery = :idRecovery
+                AND
+                a.dtrecovery IS NULL
+                AND
+                DATE_ADD(a.dtregister, INTERVAL 1 HOUR) >= NOW();
+        ", array(
+            ":idRecovery" => $idRecovery
+        ));
+        if(count($results)===0){
+            throw new \Exception("Não foi possível recuperar a senha.");
+        } else {
+            return $results[0];
+        }
     }
 }
 

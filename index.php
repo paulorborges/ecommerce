@@ -168,7 +168,52 @@ $app->post("/admin/users/:iduser", function($iduser){
 	header ("Location: /admin/users");
 	exit;
 });
+/* Rota para página de recuperação de senhas */
+$app->get("/admin/forgot", function(){
+	$page = new PageAdmin([
+		"header"=>false,
+		"footer"=>false
+	]);
+    //adiciona arquivo com conteúdo da página forgot!
+    $page->setTpl("forgot");
+});
+/* Rota para página de recuperação de senhas */
+$app->post("/admin/forgot", function(){
+	/* após digitação do endereço, vamos capturar o email digitado, verificar se o mesmo existe no banco de dados e 
+	enviar um link para que o usuário, dentro de um período pré-determinado, consiga realizar os processos de recuperação
+	da senha. O link, além de possuir um tempo de validada, poderá ser utilizado uma única vez com a chave em questão. 
+	Caso seja necessário alterar novamente a senha, será gerado um novo link com uma nova chave. Na página forgot.html pode
+	ser verificado que o forgot, além de ser enviado via post, possui um campo com nome email. Vamos utilizar o método 
+	getForgot da classe User e o retorno do método é guardado na variável user.*/
+	$user = User::getForgot($_POST["email"]);
+	/* Redirect para confirmar para o usuário que o email foi enviado com sucesso */
+	header("Location: /admin/forgot/sent");
+	exit;
+});
 
+/* Roda para página de confirmçaõ do envio/recuperação de senha */
+$app->get("/admin/forgot/sent", function(){
+	$page = new PageAdmin([
+		"header"=>false,
+		"footer"=>false
+	]);
+    //adiciona arquivo com conteúdo da página forgot!
+    $page->setTpl("forgot-sent");
+});
+/* Rota referente ao botão redefinir senha, presente no e-mail que é enviado ao usuário */
+$app->get("/admin/forgot/reset", function(){
+	$user = User::validForgotDecrypt($_GET["code"]);
+	$page = new PageAdmin([
+		"header"=>false,
+		"footer"=>false
+	]);
+	/*adiciona arquivo com conteúdo da página forgot! Passando duas variáveis conforme necessário para o
+	template em questão*/
+    $page->setTpl("forgot-reset", array(
+		"name"=>$user["desperson"],
+		"code"=>$_GET["code"]
+	));
+});
 /* inicia a montagem da pagina */
 $app->run();
 ?>
