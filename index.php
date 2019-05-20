@@ -202,7 +202,9 @@ $app->get("/admin/forgot/sent", function(){
 });
 /* Rota referente ao botão redefinir senha, presente no e-mail que é enviado ao usuário */
 $app->get("/admin/forgot/reset", function(){
+	/* Método validForgotDecrypt retorna os dados do usuário em questão para a variável $user*/
 	$user = User::validForgotDecrypt($_GET["code"]);
+
 	$page = new PageAdmin([
 		"header"=>false,
 		"footer"=>false
@@ -213,6 +215,37 @@ $app->get("/admin/forgot/reset", function(){
 		"name"=>$user["desperson"],
 		"code"=>$_GET["code"]
 	));
+});
+
+$app->post("/admin/forgot/reset", function(){
+	/* Método validForgotDecrypt retorna os dados do usuário em questão para a variável $user. Necessário validar
+	pela segunda vez em função da possibilidade de um hacker tentar invadir a segunda página e não a primeira
+	conforme método get */
+	$forgot = User::validForgotDecrypt($_POST["code"]);
+	/* Para evitar que o método de recuperação e alteração de senha seja utilizado mais de uma vez, necessário
+	gravar no banco de dados que a chave em questão já foi utilizada. Isso ocorre pelo campo dtrecovery. Dessa forma,
+	necessário criar o método setForgotUsed. */
+	User::setForgotUsed($forgot["idrecovery"]);
+	/* Para trocar a senha de fato, necessário carregar o usuário conforme abaixo */
+	$user = new User();
+	$user -> get((int)$forgot["iduser"]);
+	/* Para criptografar o password, a função a seguir pode ser utilizada. Importante verificar outros métodos e
+	funcionalidades na documentação do php */
+	$password = password_hash($_POST["password"], PASSWORD_DEFAULT,[
+		"cost"=>12
+	]);
+	/* Existe o método despassword e o metodo save. Nesse caso porém é necessário criar um novo método uma vez que é 
+	necessário utilizar o novo hash da senha escolhida antes de salvar no banco de dados. No tamplate forgot-reset o nome
+	do camo em questão é password, portanto, via post, vamos pegar o conteúdo desse campo para enviar como parâmetro.*/ 
+	$user -> setPassword($password);
+
+	$page = new PageAdmin([
+		"header"=>false,
+		"footer"=>false
+	]);
+	/*adiciona arquivo com conteúdo da página forgot! Passando duas variáveis conforme necessário para o
+	template em questão*/
+    $page->setTpl("forgot-reset-success");
 });
 /* inicia a montagem da pagina */
 $app->run();

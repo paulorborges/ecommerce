@@ -193,7 +193,10 @@ class User extends Model{
                 /* como o mcrypt foi descontinuada nas versões 7.0 do php em diante, segue outra opção de criptografia. */
                 $code = base64_encode(openssl_encrypt(
                     /*conversão para string afim de ser encriptado */
-                    json_encode($dataRecovery),
+                    //json_encode($dataRecovery),
+                    //json_encode($dataRecovery["idrecovery"]),
+                    /* Informação pura ser encriptada */
+                    $dataRecovery["idrecovery"],
                     /* algoritimo de criptografia */
                     'AES-128-CBC', 
                     /* primeira chave a ser encriptada */
@@ -262,28 +265,56 @@ class User extends Model{
     }
     /* Método para descriptograr a senha*/
     public static function validForgotDecrypt($code){
-        $idRecovery = mcrypt_decrypt(MCRYPT_RIJNDAEL_128, User::SECRET, base64_decode($code), MCRYPT_MODE_ECB);
+        /* função para recuperar o id de recuperação da senha através do hash criado em base64 e depois decriptado 
+        pela mesma chave de criptografia utilizada.*/
+        //echo base64_decode($code);
+        $idRecovery = openssl_decrypt(base64_decode($code), 'AES-128-CBC', User::SECRET, 0, User::SECRET_IV);
+        //var_dump ($idRecovery);
+        //$idRecovery = mcrypt_decrypt(MCRYPT_RIJNDAEL_128, User::SECRET, base64_decode($code), MCRYPT_MODE_ECB);
         $sql = new Sql();
-        /* dtrecovery é null porque ainda não foi utilizado. dtregister mostra a informação que foi gerado e essa data somada a 1 hora
-        precisa ser menor ou igual 1 hora para permitir o funcionamento. */
-        $results = $sql->select ("
-            SELECT * FROM tb_userspasswordsrecoveries a
+        /* dtrecovery é null porque ainda não foi utilizado. dtregister mostra a informação que foi gerado e essa 
+        data somada a 1 hora precisa ser menor ou igual 1 hora para permitir o funcionamento. */
+        $results = $sql->select ("SELECT * 
+            FROM tb_userspasswordsrecoveries a
             INNER JOIN tb_users b USING(iduser)
             INNER JOIN tb_persons c USING(idperson)
             WHERE
-                a.idrecovery = :idRecovery
+                a.idrecovery = :idrecovery
                 AND
                 a.dtrecovery IS NULL
                 AND
                 DATE_ADD(a.dtregister, INTERVAL 1 HOUR) >= NOW();
         ", array(
-            ":idRecovery" => $idRecovery
+            ":idrecovery" => $idRecovery
         ));
+        //var_dump($results[0]);
         if(count($results)===0){
             throw new \Exception("Não foi possível recuperar a senha.");
         } else {
             return $results[0];
         }
+    }
+    /* Método para setar campo dtrecovery como utilizado afim de proteger a chave e não permitir novas utilizações */
+    public static function setForgotUsed($idRecovery){
+        $sql = new Sql();
+        $sql->query("UPDATE tb_userspasswordsrecoveries SET dtrecovery = NOW() 
+                    WHERE idrecovery = :idrecovery", 
+                    array(
+                        ":idrecovery" => $idRecovery 
+                    )
+                );
+    }
+    /* Método para criptografar a senha e salvar no banco de daodos */
+    public function setPassword($password){
+        $sql = new Sql();
+        $sql->query("UPDATE tb_users 
+                    SET despassword = :password 
+                    WHERE iduser = :iduser", 
+                    array(
+                        ":password"=>$password,
+                        "iduser"=>$this->getiduser()
+                    )
+                );
     }
 }
 

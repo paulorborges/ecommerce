@@ -1,15 +1,15 @@
 <?php
 
     namespace Hcode;
-    require_once("vendor/autoload.php");
+    //require_once("vendor/autoload.php");
 
     use Rain\Tpl;
   
     class Mailer {
 
-        const USERNAME = "xxxxx";
-        const PASSWORD = "xxxxx";
-        const NAME_FROM = "xxxx";
+        const USERNAME = "XXXXX";
+        const PASSWORD = "XXXXX";
+        const NAME_FROM = "Paulo Roberto Borges";
 
         private $mail;
 
