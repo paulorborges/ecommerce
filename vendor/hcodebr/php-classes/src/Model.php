@@ -18,7 +18,12 @@
             switch($method){
 
                 case "get":
-                    return $this->values[$fieldName];
+                    /* Para os casos onde não houver o id no array passado, pode haver um problema por causa do valor 
+                    que ainda não foi definido. Nesse caso, pode ser utilizado o isset e o if ternário para evitar o 
+                    problema de indice indefinido. No modelo abaixo, se foi definido, retorna ele mesmo, se não, retorna
+                    nulo. */
+                    //return $this->values[$fieldName];
+                    return (isset($this->values[$fieldName])) ? $this->values[$fieldName] : NULL;
                 break;
 
                 case "set":
