@@ -29,11 +29,23 @@
                     <div class="footer-menu">
                         <h2 class="footer-wid-title">Categorias</h2>
                         <ul>
+                            <!--
+                                Como todas as vezes que uma categoria for criada, ou a cada vez que a página for carregada
+                                essa informação precisa ser atualizada no banco, isso consumiria muito processador além de
+                                muitos acessos ao banco de dados. Dessa forma, para esse tipo de ferramenta, importante 
+                                criar um arquivo separado que será escrito dinamicamente a cada alteração no banco. Dessa forma
+                                o arquivo ficará estático com atualizações dinamicas
+
+                                A parte abaixo se refere ao modelo inicial, exemplo
                             <li><a href="#">Categoria Um</a></li>
                             <li><a href="#">Categoria Dois</a></li>
                             <li><a href="#">Categoria Três</a></li>
                             <li><a href="#">Categoria Quarto</a></li>
                             <li><a href="#">Categoria Cinco</a></li>
+
+                                Desse ponto em diante, se refere a nova metodologia
+                            -->
+                            {include="categories-menu"}
                         </ul>                        
                     </div>
                 </div>

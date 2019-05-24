@@ -25,6 +25,8 @@ class Category extends Model{
         /* apesar de ser um array, é necessário apenas a primeira posição, ou seja, zero. Sendo assim, é enviado para o 
         setData a posição zero do results. */
         $this->setData($results[0]);
+        /* Após salvar uma categoria, necessário chamar o método para atualização das categorias na página principal da loja */
+        Category::updateFile();
     }
     /* Método que verifica se o id ainda está presente no banco de dados */
     public function get($idcategory){
@@ -44,6 +46,27 @@ class Category extends Model{
         $sql->query("DELETE FROM tb_categories WHERE idcategory = :idcategory",[
             ':idcategory'=>$this->getidcategory()
         ]);
+        /* Após deletar uma categoria, necessário chamar o método para atualização das categorias na página principal da loja */
+        Category::updateFile();
+    }
+    /* Método para atualizar menu de categorias na página principal da loja. Fica no Rodapé */
+    public static function updateFile(){
+        /* Cerrega as caterias atuais do banco de dados */
+        $categories = Category::listAll();
+        /* Montar o HTML com as informações do banco de dados */
+        /* Cria variavel do tipo array */
+        $html = [];
+        /* Através do foreach, é possível selecionar cada uma das informações e fazer um push diretamente na variável array
+        para preenchimento dos campos */
+        foreach ($categories as $row) {
+            array_push ($html, '<li><a href="/categories/'.$row['idcategory'].'">'.$row['descategory'].'</a></li>');
+        }
+        /* com o array pronto, precisamos salvar o arquivo com as informações, para isso, utiliza o fileputcontents
+        conforme abaixo. O $SERVER é uma variavel de ambiente que entre outras informações possui o diretorio onde o projeto
+        foi salvo, nesse caso, a variavel superglobal é a document_root. Como a informação a ser adicionada precisa ser uma string
+        utiliza-se o implote para buscar os dados do array.*/
+        file_put_contents($_SERVER['DOCUMENT_ROOT'].DIRECTORY_SEPARATOR."views".DIRECTORY_SEPARATOR."categories-menu.html", 
+        implode('',$html));
     }
 }   
 
