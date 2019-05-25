@@ -12,6 +12,7 @@ $app->config('debug', true);
 /* Como o arquivo index está ficando muito grande por abrigar todas as rotas. Podem ser criados arquivos menores por
 categoria ou menu por exemplo e os mesmos serem incluídos nesse por meio do require once conforme exemplo abaixo */
 require_once("site.php");
+require_once("functions.php");
 require_once("admin.php");
 require_once("admin-users.php");
 require_once("admin-categories.php");

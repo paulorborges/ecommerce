@@ -11,9 +11,27 @@ class Products extends Model{
     /* Método para listar produtos */
     public static function listAll(){
         $sql = new Sql();
+        /* recupera os dados do banco de dados como array mas o desphoto não fica no banco de dados. Por causa disso, 
+        alguns métodos, quando houver a necessidade da foto, podem apresentar erro. Para resolver esse problema, pode
+        ser criado um objeto para funcionar como se fosse uma camada, tratar esses objetos, e retornar os objetos
+        tratados. */
         return $sql->select("SELECT * FROM tb_products ORDER BY desproduct");
     }
-
+    /* Metodo para tratamento e retorno do objeto com fotos */
+    public static function checkList($list){
+        /* as variáveis com & comercial antes permitem a manipulação direta em memória */
+        foreach ($list as &$row) {
+            $product = new Products();
+            $product->setData($row);
+            /* Neste momento, chamamos o getValues para verificar todos os tratamentos existentes, inclusive se existe
+            a foto */
+            $row = $product->getValues();
+        }
+        /* Na úlitma linha do foreach, como o product values foi vinculado diretamente ao endereço de memória da variável $row, a imagem foi
+        vinculada automaticamente ao $list */
+        /* Neste momento, podemos retornar o produto já formatado */
+        return $list;
+    }
     /* Método para salvar o produto */
     public function save(){
         $sql = new Sql();

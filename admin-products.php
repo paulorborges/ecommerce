@@ -67,8 +67,12 @@
         $products->setData($_POST);
         /* Salva os dados */
         $products->save();
+        /* Verifica se existe uma nova imagem e apenas nessa condição salva o novo arquivo/imagem */
+        if ((int)$_FILES["file"]["size"] > 0) {
+            /* Sem o if anterior, o setPhoto geraria um erro. */
+            $product->setPhoto($_FILES["file"]);
+        }
         /* Realiza o upload do arquivo e nome do campo do imput*/
-        $products->setPhoto($_FILES["file"]);
         header("Location: /admin/products");
         exit;
     });
