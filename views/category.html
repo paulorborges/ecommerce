@@ -19,15 +19,26 @@
             <div class="col-md-3 col-sm-6">
                 <div class="single-shop-product">
                     <div class="product-upper">
+                        <!--Como os dados abaixo eram estáticos, ajuste para buscar o link conforme tabela productscategories
                         <img src="/resource/site/img/product-2.jpg" alt="">
+                         -->
+                         <img src="{$value.desphoto}" alt="">
                     </div>
+                    <!--Como os dados abaixo eram estáticos, ajuste para buscar o link conforme tabela productscategories
                     <h2><a href="">Apple new mac book 2015 March :P</a></h2>
+                    -->
+                    <h2><a href="/products/{$value.desurl}">{$value.desproduct}</a></h2>
                     <div class="product-carousel-price">
+                        <!--Como os dados abaixo eram estáticos, ajuste para buscar o link conforme tabela productscategories.
+                        Considerado também que o site ainda não possui a função de promoção
                         <ins>$899.00</ins> <del>$999.00</del>
+                        Utilizado função formatPrice do arquivo functions.php
+                        -->
+                        <ins>R${function="formatPrice($value.vlprice)"}</ins>
                     </div>  
                     
                     <div class="product-option-shop">
-                        <a class="add_to_cart_button" data-quantity="1" data-product_sku="" data-product_id="70" rel="nofollow" href="/canvas/shop/?add-to-cart=70">Add to cart</a>
+                        <a class="add_to_cart_button" data-quantity="1" data-product_sku="" data-product_id="70" rel="nofollow" href="/canvas/shop/?add-to-cart=70">Comprar</a>
                     </div>                       
                 </div>
             </div>

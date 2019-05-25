@@ -2,6 +2,7 @@
 
     use \Hcode\Page;
     use \Hcode\Model\Products;
+    use \Hcode\Model\Category;
 
     /* metodo para trabalhar com as rotas */
     $app->get('/', function() {
@@ -21,5 +22,19 @@
         //$results = $sql->select("SELECT * FROM tb_users");
         //echo json_encode($results);
         /* quando chega na última linha do app, o php limpa a memória chamando o destruct e adiciona o footer na página */
+    });
+    /* Rota para template das categorias */
+    $app->get("/categories/:idcategory", function($idcategory){
+        $category = new Category();
+        /* recupera o id que foi passado pelo get */
+        $category->get((int)$idcategory);
+        //chama o construct e adiciona o header
+        $page = new Page();
+        /*adiciona arquivo com conteúdo da página index! Utiliza-se também o metodo checkList para evitar o problema ao 
+        carregar a imagem. Esse método tem o retorno do objeto já formatado, incluindo a imagem. */
+        $page->setTpl("category",[
+            'category'=>$category->getValues(),
+            'products'=>Products::checkList($category->getProducts())
+        ]);
     });
 ?>

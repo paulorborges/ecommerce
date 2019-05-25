@@ -7,9 +7,9 @@
   
     class Mailer {
         
-        const USERNAME = "XXXX";
-        const PASSWORD = "XXXX";
-        const NAME_FROM = "XXX";
+        const USERNAME = "xxxx";
+        const PASSWORD = "xxxx";
+        const NAME_FROM = "xxxx";
 
         private $mail;
 
