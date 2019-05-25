@@ -69,7 +69,7 @@ class Category extends Model{
         implode('',$html));
     }
     /* Método para listar todos os produtos. Recebe um booleano para facilitar análise dos produtos relacionados ou não
-    com determinada categoria */
+    com determinada categoria. Método de seleção utilizado no admin do ecommerce. */
     public function getProducts ($related = true){
         $sql = new Sql();
         if($related === true){
@@ -97,6 +97,45 @@ class Category extends Model{
                 ':idcategory'=>$this->getidcategory()
             ]);
         }
+    }
+    /* Método para listar produtos utilizando paginação. Esse método carrega os produtos no front da ecommerce e está
+    recebendo dois parametros (1 página que vamos acessar e o 2 quantos itens serão exibidos por página) */
+    /* o itensPerPage foi alterado de 3 para 8 para permitir que sejam carregados duas linhas de 4 produtos cada */
+    public function getProductsPages($page = 1, $itensPerPage = 8){
+        $sql = new Sql();
+        /* Por causa do limit da pesquisa, precisamos utilizar um cálculo dinâmico onde, se eu estiver na página 1, o 
+        resultado seja zero, se eu estiver na página 2, o resultado será 1 e assim por diante. Com os parâmetros do 
+        getProductsPages da seguinte forma $page = 1, $itensPerPage = 3. No cálculo abaixo, se eu estiver na pág 1, 
+        1 - 1 = 0 e 0 * 3 = 0. Nesse caso, começa do zero e me traga 3 produtos. Estando na página 2, 
+        2 - 1 = 1 e 1 * 3 = 3. Nesse caso, começa do 3 e me traga 3 produtos. */
+        $start = ($page - 1) * $itensPerPage;
+        /* A função SQL_CALC_FOUND_ROUWS alimenta a função FOUND_ROWS com o número de registros do banco. Essa função 
+        é utilizada principalmenta para evitar várias consultas (1 para o total de objetos e outra para pesquisa por
+        exemplo) e dessa forma deixa as pesquisas mais leves. */
+        $results = $sql->select("SELECT SQL_CALC_FOUND_ROWS *
+            FROM tb_products a
+            INNER JOIN tb_productscategories b
+            ON a.idproduct = b.idproduct
+            INNER JOIN tb_categories c
+            ON c.idcategory = b.idcategory
+            WHERE c.idcategory = :idcategory
+            LIMIT $start, $itensPerPage;
+        ", [
+            ':idcategory' => $this -> getidcategory()
+        ]);
+        $resultTotal = $sql->select("SELECT FOUND_ROWS() AS nrtotal;");
+        /* Para retornar as duas informações, o retorno será feito em formato de array */
+        return [
+            'data'=>Products::checkList($results),
+            /* Como o resultsTotal é um array, retorna a primeira posição, coluna nrtotal. Sempre bom fazer um cast para 
+            int para garantir que a função será enviada realmente como número */
+            'total'=>(int)$resultTotal[0]["nrtotal"],
+            /* Podemos retornar o número de páginas totais, fazendo um cálculo entre o total de produtos e o número
+            de produtos por página. Dependendo do resultado, teremos uma dízima e para arredondar para cima, utilizamos
+            a função CEIL */
+            'pages'=>ceil($resultTotal[0]["nrtotal"] / $itensPerPage)
+
+        ];
     }
     /* Método para acicionar produtos em uma categoria */
     public function addProduct(Products $product){

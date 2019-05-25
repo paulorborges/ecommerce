@@ -219,16 +219,25 @@
                 <div class="product-pagination text-center">
                     <nav>
                         <ul class="pagination">
+                        <!-- Para montar o link da página, o li abaixo será substituído por um loop
                         <li>
                             <a href="#" aria-label="Previous">
                             <span aria-hidden="true">«</span>
                             </a>
                         </li>
+                        e ficará da seguinte forma -->
+                        <?php $counter1=-1;  if( isset($pages) && ( is_array($pages) || $pages instanceof Traversable ) && sizeof($pages) ) foreach( $pages as $key1 => $value1 ){ $counter1++; ?>
+
+                        <!-- Os itens abaixo, deixa de ser estáticos e serão substituídos pelas função dinamica 
                         <li><a href="#">1</a></li>
                         <li><a href="#">2</a></li>
                         <li><a href="#">3</a></li>
                         <li><a href="#">4</a></li>
                         <li><a href="#">5</a></li>
+                        -->
+                        <li><a href="<?php echo htmlspecialchars( $value1["link"], ENT_COMPAT, 'UTF-8', FALSE ); ?>"><?php echo htmlspecialchars( $value1["page"], ENT_COMPAT, 'UTF-8', FALSE ); ?></a></li>
+                        <?php } ?>
+
                         <li>
                             <a href="#" aria-label="Next">
                             <span aria-hidden="true">»</span>

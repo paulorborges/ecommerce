@@ -217,16 +217,23 @@
                 <div class="product-pagination text-center">
                     <nav>
                         <ul class="pagination">
+                        <!-- Para montar o link da página, o li abaixo será substituído por um loop
                         <li>
                             <a href="#" aria-label="Previous">
                             <span aria-hidden="true">«</span>
                             </a>
                         </li>
+                        e ficará da seguinte forma -->
+                        {loop="$pages"}
+                        <!-- Os itens abaixo, deixa de ser estáticos e serão substituídos pelas função dinamica 
                         <li><a href="#">1</a></li>
                         <li><a href="#">2</a></li>
                         <li><a href="#">3</a></li>
                         <li><a href="#">4</a></li>
                         <li><a href="#">5</a></li>
+                        -->
+                        <li><a href="{$value.link}">{$value.page}</a></li>
+                        {/loop}
                         <li>
                             <a href="#" aria-label="Next">
                             <span aria-hidden="true">»</span>
