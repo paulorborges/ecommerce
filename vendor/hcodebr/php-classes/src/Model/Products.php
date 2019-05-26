@@ -137,7 +137,40 @@ class Products extends Model{
         imagedestroy($image);
         /* Para que o data fique carregado, segue abaixo */
         $this->checkPhoto();
-    }    
+    }
+    /* Método para carregar os dados do produto a partir de uma url*/
+    public function getFromUrl($desurl){
+        $sql = new Sql();
+        $rows = $sql->select("SELECT *
+            FROM tb_products
+            WHERE desurl = :desurl
+            LIMIT 1",[
+                ':desurl'=>$desurl
+            ]
+        );
+        /* As informações retornadas pelo select e atribuídas a $rows, são adicionadas ao objeto conforme abaixo */
+        $this->setData($rows[0]);
+    }
+    /* Método para carregar em quais categorias o produto foi vinculado */
+    public function getCategories(){
+        $sql = new Sql();
+        /* Para testar a seleção e possíveis erros na seleção, pode ser utilizado o var-dump para analisar o comando
+        enviado e com esse comando utilizar a seleção direto no workbanch por exemplo */
+        /*
+        var_dump("SELECT * FROM tb_categories a INNER JOIN tb_productscategories b ON a.idcategory = b.idcategory
+            WHERE b.idproduct = ".$this->getidproduct());
+        exit;
+        */
+        return $sql->select("SELECT * 
+            FROM tb_categories a
+            INNER JOIN tb_productscategories b
+            ON a.idcategory = b.idcategory
+            WHERE b.idproduct = :idproduct
+        ",[
+            /* Como nos estamos na própria classe, o objeto pode ser acessado diretamente com o this */
+            ':idproduct'=>$this->getidproduct()
+        ]);
+    }
 }   
 
 ?>

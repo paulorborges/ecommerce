@@ -9,7 +9,7 @@
         
         const USERNAME = "xxxxx";
         const PASSWORD = "xxxxx";
-        const NAME_FROM = "xxxx";
+        const NAME_FROM = "yyyy";
 
         private $mail;
 

@@ -59,6 +59,20 @@
             'products'=>$pagination["data"],
             'pages'=>$pages
         ]);
-        
+    });
+    /* Rota para template de detalhes dos produtos */
+    $app->get("/products/:desurl", function($desurl){
+        $product = new Products();
+        /* O metodo getFromUrl utilizado abaixo carrega os dados do produto para o próprio objeto com o setData */
+        $product->getFromUrl($desurl);
+        $page = new Page();
+        $page -> setTpl("product-detail",[
+            /* Como os dados foram carregados no objeto produto, o getValues busca as informações e envia, através 
+            do elemento product criado nessa função para o template */
+            'product'=>$product->getValues(),
+            /* Como os dados foram carregados no objeto produto, o getCategories busca as informações e envia, através 
+            do elemento categories criado nessa função para o template */
+            'categories'=>$product->getCategories()
+        ]);
     });
 ?>
