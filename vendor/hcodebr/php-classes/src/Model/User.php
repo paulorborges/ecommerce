@@ -13,6 +13,53 @@ class User extends Model{
     const SECRET    = "HcodePHP7_Secret"; //16 caracteres
     const SECRET_IV = "FrisaComunicacao"; //16 caracteres
 
+    /* Como o usuário já está inserido na sessão atraves do User::SESSION, podemos criar um método para 
+    retornar o usuário logado sempre que outras classes precisarem */
+    public static function getFromSession(){
+        $user = new User();
+        /* Verificar se a sessão existe e se o ID do usuario é maior que zero */
+        if (isset($_SESSION[User::SESSION]) && (int)$_SESSION[User::SESSION]['iduser'] > 0){
+            /* Caso a sessão esteja definida e o id do usuário for maior que zero, podemos setar os dados da sessão
+            ao objeto usuário */
+            $user->setData($_SESSION[User::SESSION]);
+        }
+        /* Se o if tiver retornado true, o programa seta no objeto usuário as informações do mesmo e o retorno abaixo
+        envia os dados do usuário logado para as funções que chamarem o método. Se o if retornou para uma das duas condições
+        como false, o retorno abaixo será feito com um usuário/objeto vazio. */
+        return $user;
+    }
+    /* Metodo para verificar se o usuário está logado */
+    public static function checkLogin($inadmin = true){
+        /* Necessário verificar se a sessão NÃO foi definida com a constante session OU, tenha sido definida mas esteja
+        VAZIA (nesse caso, seja falsa) OU, se fizer o castin de uma sessão vazia o valor atribuído será zero e portanto
+        não será uma sessão válida. Nesse último, se o valor for maior que zero será uma sessão verdadeira, portanto, se NÃO
+        for, provavelmente, possui um id de usuário inválido. Como o acesso em questão é feito contra a página de administração
+        o parámetro inadmin = true verifica se o usuário em questão, mesmo sendo válido, pertence realmente à administração do site.
+        Para todos os demais, redirecionar para página de login. */
+        if(!isset ($_SESSION[User::SESSION])
+           ||
+           !$_SESSION[User::SESSION]
+           ||
+           !(int)$_SESSION[User::SESSION]["iduser"]>0){
+            // Não está logado
+            return false;
+        } else {
+            /* Ele está logado mas pode acessar a sessão de admin? Na tabela de usuário existe um parâmetro que fala
+            se o usuário é administrador ou não mas além disso precisamos entender, se ele tem a permissão e se ele quer
+            utilizar a sessão administrativa ou apenas a loja. O if abaixo só ocorre se a rota acessada for de 
+            administrador */
+            if($inadmin === true && (bool)$_SESSION[User::SESSION]['inadmin'] === true){
+                return true;
+            } else if ($inadmin === false){
+                /* Nesse caso, como caiu no else, ele está logado, mas não é administrativo */
+                return true;
+            } else {
+                /* Nesse caso, como caiu no else, ele não está logado. */
+                return false;
+            }
+        }
+    }
+
     public static function login($login,$password){
         $sql = new Sql();
         $results = $sql->select("SELECT * FROM tb_users WHERE deslogin = :LOGIN", array(
@@ -61,6 +108,9 @@ class User extends Model{
         for, provavelmente, possui um id de usuário inválido. Como o acesso em questão é feito contra a página de administração
         o parámetro inadmin = true verifica se o usuário em questão, mesmo sendo válido, pertence realmente à administração do site.
         Para todos os demais, redirecionar para página de login. */
+        /* com a Criação do método checkLogin, as verificações abaixo foram transferidas para o mesmo e podem ser desabilitadas
+        aqui fazendo com que esse método utilize as mesmas validações do checkLogin conforme abaixo */
+        /*
         if(!isset ($_SESSION[User::SESSION])
            ||
            !$_SESSION[User::SESSION]
@@ -68,10 +118,15 @@ class User extends Model{
            !(int)$_SESSION[User::SESSION]["iduser"]>0
            ||
            (bool)$_SESSION[User::SESSION]["inadmin"] !== $inadmin
-           /* caso o usuário passar por todas as validações anteriores, necessário verificar se a sessão está rodando 
-           no servidor web. Para isso, no arquivo de configuração é necessário iniciar o uso de sessões, antes do 
-           require, função session start. */
+           // caso o usuário passar por todas as validações anteriores, necessário verificar se a sessão está rodando 
+           // no servidor web. Para isso, no arquivo de configuração é necessário iniciar o uso de sessões, antes do 
+           // require, função session start.
         ){
+            header("Location: /admin/login");
+            exit;
+        }
+        */
+        if(User::checkLogin($inadmin)){
             header("Location: /admin/login");
             exit;
         }

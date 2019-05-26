@@ -3,6 +3,7 @@
     use \Hcode\Page;
     use \Hcode\Model\Products;
     use \Hcode\Model\Category;
+    use \Hcode\Model\Cart;
 
     /* metodo para trabalhar com as rotas */
     $app->get('/', function() {
@@ -74,5 +75,14 @@
             do elemento categories criado nessa função para o template */
             'categories'=>$product->getCategories()
         ]);
+    });
+    /* Rota para template do carrinho de compras */
+    $app->get("/cart", function(){
+        /* Verifica se já existe um carrinho de compras setado, quais os produtos e caso não exista, cria um novo 
+        carrinho */
+        $cart = Cart::getFromSession();
+
+        $page = new Page();
+        $page -> setTpl("cart");
     });
 ?>
