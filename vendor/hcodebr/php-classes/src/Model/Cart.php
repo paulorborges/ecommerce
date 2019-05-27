@@ -117,6 +117,100 @@
             o objeto com o setData conforme abaixo */
             $this->setData($results[0]);
         }
+        /* Método para adicionar produtos ao carrinho. Recebe uma instancia da classe Product */
+        public function addProduct(Products $product){
+            $sql = new Sql();
+            /* Função para inserir produtos ao carrinho */
+            $sql->query("INSERT INTO tb_cartsproducts (idcart, idproduct)
+                VALUES(:idcart, :idproduct)", [
+                    ':idcart'=>$this->getidcart(),
+                    ':idproduct'=>$product->getidproduct()
+                ]
+            );
+        }
+        /* Método para remoção dos produtos do carrinho não deve excluir os mesmos, apenas marcar que eles foram removidos.
+        Essa técnica permite que posteriormente seja feito uma análise do funil de vendas afim de avaliar quais produtos
+        foram incluídos e removidos e em que momento. Além de receber a instancia da classe product, esse método recebe
+        também uma variável all que por default ela é setada como false. Essa variável permite uma análise se a remoção é
+        de uma quantidade do item do carrinho ou se seria do item inteiro (todas as unidades). Isso basicamente verifica
+        se o usuário está aumentando ou diminuindo a quantidade de itens comprados ou clicando no x para remover o item por
+        copmleto */
+        public function removeProduct(Products $product, $all = false){
+            $sql = new Sql();
+            
+            if ($all){
+                /* Função para remover o item por completo, independente da quantidade de unidades deste item */
+                $sql -> query("UPDATE tb_cartsproducts
+                    SET dtremoved = NOW()
+                    WHERE idcart = :idcart
+                    AND idproduct = :idproduct
+                    /* verifica se dtRemoved é nulo ou não. Senão podemos ficar setando a data de remoção de um item que 
+                    já foi setado */
+                    AND dtremoved IS NULL
+                    ",[
+                        ':idcart'=>$this->getidcart(),
+                        ':idproduct'=>$product->getidproduct()
+                    ]
+                );
+            } else {
+                /* Função para remover uma unidade do item em questão, porém mantém o item no carrinho */
+                $sql -> query("UPDATE tb_cartsproducts
+                    SET dtremoved = NOW()
+                    WHERE idcart = :idcart
+                    AND idproduct = :idproduct
+                    /* verifica se dtRemoved é nulo ou não. Senão podemos ficar setando a data de remoção de um item que 
+                    já foi setado */
+                    AND dtremoved IS NULL
+                    /* para garantir que seja removido apenas 1, utilizamos o limit */
+                    LIMIT 1
+                    ",[
+                        ':idcart'=>$this->getidcart(),
+                        ':idproduct'=>$product->getidproduct()
+                    ]
+                );
+            }
+        }
+        /* Metodo para listar produtos do carrinho */
+        public function getProducts(){
+            $sql = new Sql();
+            /* Para testar a query abaixo, podemos utilizar o var-dump */
+            /*
+            var_dump("SELECT b.idproduct, b.desproduct, b.vlprice, b.vlwidth, 
+                b.vlheight, b.vllength, b.vlweight, b.desurl,
+                    COUNT(*) AS nrqtd, 
+                    SUM (b.vlprice) AS vltotal
+                FROM tb_cartsproducts a
+                INNER JOIN tb_products b
+                ON a.idproduct = b.idproduct
+                WHERE a.idcart = :idcart
+                AND a.dtremoved IS NULL
+                GROUP BY b.idproduct, b.desproduct, b.vlprice, b.vlwidth, b.vlheight, b.vllength, b.vlweight, b.desurl
+                ORDER BY b.desproduct");
+            exit;
+            */
+            /* Como iremos utilizar o group by, nesse caso não devemos utilizar o select * e sim apontar quais colunas
+            devem ser agrupadas e como elas serão agrupadas (count, sum, etc) */
+            $rows = $sql->select("SELECT b.idproduct, b.desproduct, b.vlprice, b.vlwidth, 
+                b.vlheight, b.vllength, b.vlweight, b.desurl,
+                    COUNT(*) AS nrqtd, 
+                    SUM(b.vlprice) AS vltotal
+                FROM tb_cartsproducts a
+                INNER JOIN tb_products b
+                ON a.idproduct = b.idproduct
+                WHERE a.idcart = :idcart
+                /* verifica também se o produto não foi removido */
+                AND a.dtremoved IS NULL
+                /* O agrupamento permite gerar totais por categoria ou conforme os parametros selecionados */
+                GROUP BY b.idproduct, b.desproduct, b.vlprice, b.vlwidth, b.vlheight, b.vllength, b.vlweight, b.desurl
+                /* Ordenado pelo nome do produto */
+                ORDER BY b.desproduct
+            ", [
+                ':idcart'=>$this->getidcart()
+            ]);
+            /* Importante fazer tambem o tratamento dos objetos e das figuras. Para isso, temos o metodo checkList na 
+            classe product */
+            return Products::checkList($rows);
+        }
     }   
 
 ?>

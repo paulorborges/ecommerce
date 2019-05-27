@@ -91,9 +91,9 @@
                                         <!-- Como o caminho da imagem agora vem do banco, remove o camnho estático
                                         <img src="resource/site/img/product-1.jpg" alt="">
                                         -->
-                                        <img src=<?php echo htmlspecialchars( $value1["desphoto"], ENT_COMPAT, 'UTF-8', FALSE ); ?> alt="">
+                                        <img src="<?php echo htmlspecialchars( $value1["desphoto"], ENT_COMPAT, 'UTF-8', FALSE ); ?>" alt="">
                                         <div class="product-hover">
-                                            <a href="#" class="add-to-cart-link"><i class="fa fa-shopping-cart"></i> Comprar</a>
+                                            <a href="/cart/<?php echo htmlspecialchars( $value1["idproduct"], ENT_COMPAT, 'UTF-8', FALSE ); ?>/add" class="add-to-cart-link"><i class="fa fa-shopping-cart"></i> Comprar</a>
                                             <a href="/products/<?php echo htmlspecialchars( $value1["desurl"], ENT_COMPAT, 'UTF-8', FALSE ); ?>" class="view-details-link"><i class="fa fa-link"></i> Ver Detalhes</a>
                                         </div>
                                     </div>
