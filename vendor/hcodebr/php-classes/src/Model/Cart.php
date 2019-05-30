@@ -14,6 +14,9 @@
         utilizaremos sempre o mesmo carrinho que foi instanciado na sessão vigente. Para isso, vamos utilizar uma constante
         para permitir a seleção em vários lugares diferentes do projeto */
         const SESSION = "Cart";
+        /* Declaração da constante que contem a session do error. Constante utilizada por exemplo no carrinho de compras para tratar
+        possíveis mensagens de erro enviadas pelo sistema do correio. */
+        const SESSION_ERROR = "CartError";
         /* Método para verificar se é necessáiro inserir um carrinho novo, se devemos apenas editar o carrinho existente, 
         se a sessão foi perdida por causa do tempo mas se eu ainda tenho o ID do carrinho em questão, etc. */
         public static function getFromSession(){
@@ -127,6 +130,8 @@
                     ':idproduct'=>$product->getidproduct()
                 ]
             );
+            /* Para caso das quantidades serem alteradas, recalcula o valor do frete */
+            $this->getCalculateTotal();
         }
         /* Método para remoção dos produtos do carrinho não deve excluir os mesmos, apenas marcar que eles foram removidos.
         Essa técnica permite que posteriormente seja feito uma análise do funil de vendas afim de avaliar quais produtos
@@ -169,6 +174,8 @@
                     ]
                 );
             }
+            /* Para caso das quantidades serem alteradas, recalcula o valor do frete */
+            $this->getCalculateTotal();
         }
         /* Metodo para listar produtos do carrinho */
         public function getProducts(){
@@ -211,6 +218,179 @@
             classe product */
             return Products::checkList($rows);
         }
-    }   
+        /* Metodo para totalizar produtos do carrinho */
+        public function getProductsTotals(){
+            $sql = new Sql();
+            $results = $sql->select("SELECT 
+                SUM(vlprice) AS vlprice, 
+                SUM(vlwidth) AS vlwidth,
+                SUM(vlheight) AS vlheight,
+                SUM(vllength) AS vllength,
+                SUM(vlweight) AS  vlweight,
+                COUNT(*) AS nrqtd
+                FROM tb_products a
+                INNER JOIN tb_cartsproducts b
+                ON a.idproduct = b.idproduct
+                WHERE b.idcart = :idcart
+                AND dtremoved IS NULL;
+            ",[
+                /* Como o metodo está na mesma classe, basta utilizar o this */
+                ':idcart'=>$this->getidcart()
+            ]);
+            /* Verifica se houve algum erro na seleção do itens */
+            if(count($results) > 0) {
+                return $results[0];
+            } else {
+                /* Se não encontrou nada, retorna um array vazio */
+                return [];
+            }
+        }
+        /* Método para calcular o valor do frete */
+        public function setFreight($nrzipcode){
+            /* Caso o usuário digite o código adicionando o tracinho, devemos remove-lo para evitar problemas com o webservice */
+            $nrzipcode = str_replace('-','',$nrzipcode);
+            /* Verifica as informações totais do carrinho */
+            $totals = $this->getProductsTotals();
+            /* Verifica se existe alguma informação no carrinho */
+            if($totals['nrqtd'] > 0){
+                /* Os cálculos abaixo foram realizados apenas para testes. Lembrar que com mais de um objeto, pode ser necessário somar
+                por exemplo as alturas e utilizar o maior comprimento para identificar uma caixa que caiba todo o conteúdo. O fato é que,
+                apenas somar as dimensões dos objetos provavelmente não vai espelhar o correto dimensionamento e frete */
 
+                /* Existem várias regras de negócio que podem retornar erro. Uma delas é a comprimento do objeto (nVlComprimento) dependendo 
+                do tipo de serviço (nCdServico). Para o exemplo abaixo, vamos travar a quantidade no tamanho mínimo permitido para o cálculo 
+                conforme regra de negócio. Deve ser considerado no desenvolvimento oficial que determinado produto não pode utilizar tais
+                serviços, afim de não alterar a característica e configurar corretamente os dados. Metodo abaixo apenas para teste */
+                if ($totals['vllength'] < 16){
+                    $totals['vllength'] = 16;
+                }
+                /* Existem várias regras de negócio que podem retornar erro. Uma delas é a altura do objeto (nVlAltura) dependendo 
+                do tipo de serviço (nCdServico). Para o exemplo abaixo, vamos travar a quantidade no tamanho máximo permitido para o cálculo 
+                conforme regra de negócio. Deve ser considerado no desenvolvimento oficial que determinado produto não pode utilizar tais
+                serviços, afim de não alterar a característica e configurar corretamente os dados. Metodo abaixo apenas para teste */
+                if ($totals['vlheight'] > 105){
+                    $totals['vlheight'] = 105;
+                }
+                /* Função para ajustar o tamanho máximo de todos os elementos dimensionais  */
+                if ($totals['vllength'] + $totals['vlheight'] + $totals['vlwidth'] > 200){
+                    $totals['vlwidth'] = 50;
+                    $totals['vlheight'] = 105;
+                    $totals['vllength'] = 36;
+                }
+                /* Para realizar a montagem da string com as variaveis separadas por & e de forma mais prática, é utilizando a ferramenta de
+                montagem do php conforme abaixo */
+                $qs = http_build_query([
+                    'nCdEmpresa'=>'',
+                    'sDsSenha'=>'',
+                    'nCdServico'=>'40010', /*Nesse caso o serviço ficou fixo por causa do teste, se der opção de escolha para o usuário, 
+                    necessário alterar formulário para permitir a seleção via combo por exemplo */
+                    'sCepOrigem'=>'35661326', //cep para teste, necessário pegar essa informação do cadastro da loja
+                    'sCepDestino'=>$nrzipcode,
+                    'nVlPeso'=>$totals['vlweight'],
+                    'nCdFormato'=>'1', /*formato de caixa ou pacote conforme manual. Necessário avaliar opção para ajuste 
+                    do cadastro do produto */
+                    'nVlComprimento'=>$totals['vllength'],
+                    'nVlAltura'=>$totals['vlheight'],
+                    'nVlLargura'=>$totals['vlwidth'],
+                    'nVlDiametro'=>'0', //Verificar cadastro na tabela de produtos para carregar essa informação. Quando não houver, passar zero.
+                    'sCdMaoPropria'=>'S', /* Opção de serviço do correio, S para Sim ou N para Não. Verificar parametro para deixar que o usuário
+                    selecione essa opção. Esse serviço afeta o valor do frete. */
+                    'nVlValorDeclarado'=>$totals['vlprice'],// valor total do carrinho
+                    'sCdAvisoRecebimento'=>'S' /* Opção de serviço do correio, S para Sim ou N para Não. Verificar parametro para deixar que o 
+                    usuário selecione essa opção. Esse serviço afeta o valor do frete. */
+                ]);
+                /* Realiza o cálculo do frete. Como o retorno do site ocorre no formato XML, a função abaixo precisa fazer essa leitura */
+                $xml = simplexml_load_file("http://ws.correios.com.br/calculador/CalcPrecoPrazo.asmx/CalcPrecoPrazo?".$qs);
+                /* para analisar o retorno, pode ser utilizado a função de echo e utilizar o json para análise. Como o resultado está 
+                em formato XML, converte-se para um array */
+                /*
+                echo json_encode((array)$xml);
+                exit;
+                */
+                /* Com o retorno dos dados no objeto xml, podemos setar as informações para que o usuário avalie o valor calculado do frete,
+                prazo de entrega, etc. Importante reparar que o retorno ocorreu encadeado em vários níveis, no formato de árvore, portanto, 
+                para acessar a informação é importante percorrer os nós da árvore conforme exemplos abaixo (Servico->cServico) */
+                $result = $xml->Servicos->cServico;
+                /* Para exibir alguma possível mensagem de erro que ainda não foi tratada no campo reservado para essa finalidade, podemos
+                verificar se a mensagem de erro é diferente de vazio e exibí-la para melhor análise */
+                if ($result->MsgErro != '') {
+                    /* Se a mensagem de erro é diferente de vazio, passamos a mesma */
+                    Cart::setMsgError($result->MsgErro);
+                } else {
+                    /* Se não houve mensagem de erro, podemos limpar a sessão de erro */
+                    Cart::clearMsgError();
+                }
+                /* Para inserir a informação do prazo de entrega no objeto, segue abaixo */
+                $this->setnrdays($result->PrazoEntrega);
+                /* O retorno do correio manda o valor no formato brasileiro mas no banco de dados salvamos no formato americado, portanto, 
+                necessário converter conforme abaixo */
+                $this->setvlfreight(Cart::formatValueToDecimal($result->Valor));
+                /* Para inserir a informação do código de CEP no objeto, segue abaixo */
+                $this->setdeszipcode($nrzipcode);
+                /* Grava as informações no banco */
+                $this->save();
+                return $result;
+            } else {
+                /* Caso não exista informações no carrinho, zera os dados e avisa ao usuário */
+                
+            }
+        }
+        /* Método para converter valores brasileiros em americanos */
+        public static function formatValueToDecimal($value):float{
+            /* primeiro retiramos os pontos por nenhuma informação */
+            $value = str_replace('.','',$value);
+            /* agora retorno a informação trocando a vírgula por um ponto */
+            return str_replace(',','.',$value);
+        }
+        /* Método para criar sessão de mensagem de erro */
+        public static function setMsgError($msg){
+            /* Criamos uma constante dentro do carrinho */
+            $_SESSION[Cart::SESSION_ERROR] = $msg;
+        }
+        /* Método para recuperar a mensagem de erro */
+        public static function getMsgError(){
+            /* Verificamos se existe alguma mensagem de erro definida. Se existe, devolvemos a mensagem, se não, enviamos vazio */
+            $msg = (isset($_SESSION[Cart::SESSION_ERROR])) ? $_SESSION[Cart::SESSION_ERROR] : "";
+            /* Após carregar a mensagem de erro na variável, podemos limpar a mesma */
+            Cart::clearMsgError();
+            /* Após limpar a mensagem na sessão, retornamos a mesma para o método que fez a chamada */
+            return $msg;
+        }
+        /* Método para limpar a sessão da mensagem de erro */
+        public static function clearMsgError(){
+            /* Para limpar a sessão, igualamos a mesma a nulo */
+            $_SESSION[Cart::SESSION_ERROR] = NULL;
+        }
+        public function updateFreight(){
+            /* Verificar se existe um CEP inserido. Caso não exista, não é possível atualizar o valor */
+            if ($this->getdeszipcode() != ''){
+                /* Se o CEP for diferente de vazio, passo o CEP presente no objeto do carrinho */
+                $this->setFreight($this->getdeszipcode());
+            }
+        }
+        /* Método para sobreescrita do método getValues da classe extendida. O objetivo será preencher no carrinho de compra
+        o subtotal referente ao valor dos produtos e total geral da compra incluindo o valor do frete */
+        public function getValues(){
+            $this->getCalculateTotal();
+            return parent::getValues();
+        }
+        /* Método para verificar as informações totais do carrinho */
+        public function getCalculateTotal(){
+            /* atualiza o valor do frete após alterações de quantidade */
+            $this->updateFreight();
+            /* o getProductsTotals já possui os valores totais das quantidades, soma do preço, etc */
+            $totals = $this->getProductsTotals();
+            /* agora adicionamos as informações que não existem dentro do cart */
+            $this->setvlsubtotal($totals['vlprice']);
+            $this->setvltotal($totals['vlprice'] + $this->getvlfreight());
+        }
+        /* Método para zerar o valor do frete e dias de entrega caso o carrinho esteja vazio */
+        public function checkZipCode(){
+            $products = $this->getProducts();
+            if (!count($products) > 0) {
+                $this->setdeszipcode('');
+                $this->setvlfreight(0);
+            }
+        }
+    }   
 ?>

@@ -81,12 +81,20 @@
         /* Verifica se já existe um carrinho de compras setado, quais os produtos e caso não exista, cria um novo 
         carrinho */
         $cart = Cart::getFromSession();
+        /* Verifica se o carrinho de compras possui itens */
+        $cart->checkZipCode();
 
         $page = new Page();
+        /* Para verificar as informações presentes no carrinho, pode ser utilizado o var-dump conforme abaixo */
+        /*
+        var_dump($cart->getValues());
+        exit;
+        */
         /* Além de indicar a rota, passa-se os parametros do carrinho, produtos, usuários, etc */
         $page -> setTpl("cart", [
             'cart'=>$cart->getValues(),
-            'products'=>$cart->getProducts()
+            'products'=>$cart->getProducts(),
+            'error'=>Cart::getMsgError()
         ]);
     });
     /* Rota para template do método de adicionar produtos ao carrinho de compras */
@@ -130,6 +138,15 @@
         /* Para remover o produto inteiro do carrinho, como o parametro all por default é false, passamos o segundo
         parametro como true */
         $cart -> removeProduct ($product, true);
+        header("Location: /cart");
+        exit;
+    });
+    /* Rota para template do cálculo do frete no carrinho de compras. */
+    $app->post("/cart/freight", function(){
+        $cart = Cart::getFromSession();
+        /* Para passar o CEP para sessão, utilizamos o $_POST do objeto digitado no campo ZIPCODE do template cart.html */
+        $cart -> setFreight($_POST['zipcode']);
+        /* Redireciona para a tela do carrinho */
         header("Location: /cart");
         exit;
     });
