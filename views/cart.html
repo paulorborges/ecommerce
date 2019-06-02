@@ -126,7 +126,25 @@
 
                                             <tr class="shipping">
                                                 <th>Frete</th>
+                                                
                                                 <td>R${function="formatPrice($cart.vlfreight)"}{if="$cart.nrdays > 0"} <small>prazo de {$cart.nrdays} dia(s)</small>{/if}</td>
+                                                
+                                                <!-- 
+                                                    O código de verificação abaixo foi adicionado na tentativa de ajustar a operação do 
+                                                    código anterior para evitar problemas no valor do frete
+                                                 
+                                                <td>R$
+                                                    {if="$cart.vlfreight > 0"}
+                                                        {function="formatPrice($cart.vlfreight)"}
+                                                    {else}
+                                                        0,00
+                                                    {/if}
+                                                    {if="$cart.nrdays > 0"} 
+                                                        <small>prazo de {$cart.nrdays} dia(s)</small>
+                                                    {/if}
+                                                </td>
+
+                                                -->
                                             </tr>
 
                                             <tr class="order-total">

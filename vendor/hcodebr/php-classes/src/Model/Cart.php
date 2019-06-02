@@ -261,22 +261,35 @@
                 do tipo de serviço (nCdServico). Para o exemplo abaixo, vamos travar a quantidade no tamanho mínimo permitido para o cálculo 
                 conforme regra de negócio. Deve ser considerado no desenvolvimento oficial que determinado produto não pode utilizar tais
                 serviços, afim de não alterar a característica e configurar corretamente os dados. Metodo abaixo apenas para teste */
-                if ($totals['vllength'] < 16){
+                if ($totals['vllength'] < 16 || $totals['vllength'] > 105){
                     $totals['vllength'] = 16;
+                }
+                if ($totals['vllength'] > 105){
+                    $totals['vllength'] = 105;
                 }
                 /* Existem várias regras de negócio que podem retornar erro. Uma delas é a altura do objeto (nVlAltura) dependendo 
                 do tipo de serviço (nCdServico). Para o exemplo abaixo, vamos travar a quantidade no tamanho máximo permitido para o cálculo 
                 conforme regra de negócio. Deve ser considerado no desenvolvimento oficial que determinado produto não pode utilizar tais
                 serviços, afim de não alterar a característica e configurar corretamente os dados. Metodo abaixo apenas para teste */
+                if ($totals['vlheight'] < 2){
+                    $totals['vlheight'] = 2;
+                }
                 if ($totals['vlheight'] > 105){
                     $totals['vlheight'] = 105;
                 }
-                /* Função para ajustar o tamanho máximo de todos os elementos dimensionais  */
+                /* Função para ajustar o tamanho da largura */
+                if ($totals['vlwidth'] < 11){
+                    $totals['vlwidth'] = 11;
+                }
+                if ($totals['vlwidth'] > 105){
+                    $totals['vlwidth'] = 105;
+                }
+                /* Função para ajustar o tamanho máximo de todos os elementos dimensionais  
                 if ($totals['vllength'] + $totals['vlheight'] + $totals['vlwidth'] > 200){
                     $totals['vlwidth'] = 50;
                     $totals['vlheight'] = 105;
                     $totals['vllength'] = 36;
-                }
+                }*/
                 /* Para realizar a montagem da string com as variaveis separadas por & e de forma mais prática, é utilizando a ferramenta de
                 montagem do php conforme abaixo */
                 $qs = http_build_query([
@@ -304,6 +317,7 @@
                 /* para analisar o retorno, pode ser utilizado a função de echo e utilizar o json para análise. Como o resultado está 
                 em formato XML, converte-se para um array */
                 /*
+                //var_dump($xml);
                 echo json_encode((array)$xml);
                 exit;
                 */
@@ -313,26 +327,44 @@
                 $result = $xml->Servicos->cServico;
                 /* Para exibir alguma possível mensagem de erro que ainda não foi tratada no campo reservado para essa finalidade, podemos
                 verificar se a mensagem de erro é diferente de vazio e exibí-la para melhor análise */
+                /* Teste do objeto mensagem */
+                /*
+                var_dump($result->MsgErro);
+                exit;
+                */
                 if ($result->MsgErro != '') {
                     /* Se a mensagem de erro é diferente de vazio, passamos a mesma */
-                    Cart::setMsgError($result->MsgErro);
+                    Cart::setMsgError((string)$result->MsgErro);
+                    return false;
                 } else {
                     /* Se não houve mensagem de erro, podemos limpar a sessão de erro */
                     Cart::clearMsgError();
+                    /* Para inserir a informação do prazo de entrega no objeto, segue abaixo */
+                    $this->setnrdays($result->PrazoEntrega);
+                    /* O retorno do correio manda o valor no formato brasileiro mas no banco de dados salvamos no formato americado, portanto, 
+                    necessário converter conforme abaixo */
+                    $this->setvlfreight(Cart::formatValueToDecimal($result->Valor));
+                    /* Para inserir a informação do código de CEP no objeto, segue abaixo */
+                    $this->setdeszipcode($nrzipcode);
+                    /* Grava as informações no banco */
+                    $this->save();
+                    return $result;
                 }
-                /* Para inserir a informação do prazo de entrega no objeto, segue abaixo */
-                $this->setnrdays($result->PrazoEntrega);
-                /* O retorno do correio manda o valor no formato brasileiro mas no banco de dados salvamos no formato americado, portanto, 
-                necessário converter conforme abaixo */
-                $this->setvlfreight(Cart::formatValueToDecimal($result->Valor));
-                /* Para inserir a informação do código de CEP no objeto, segue abaixo */
-                $this->setdeszipcode($nrzipcode);
-                /* Grava as informações no banco */
-                $this->save();
-                return $result;
             } else {
                 /* Caso não exista informações no carrinho, zera os dados e avisa ao usuário */
-                
+                /*
+                $sql = new Sql();
+                $sql->query("UPDATE tb_carts 
+                    SET deszipcode = NULL, vlfreight = NULL, nrdays = NULL 
+                    WHERE idcart = :idcart ", [
+                        ':idcart'=>$this->getidcart()
+                    ]
+                );
+                */
+                /* Se não houve mensagem de erro, podemos limpar a sessão de erro */
+                Cart::clearMsgError();
+                $this->getCalculateTotal();             
+                //return Cart::setMsgError("Carrinho de Compra não possui itens!");
             }
         }
         /* Método para converter valores brasileiros em americanos */
@@ -362,10 +394,17 @@
             $_SESSION[Cart::SESSION_ERROR] = NULL;
         }
         public function updateFreight(){
-            /* Verificar se existe um CEP inserido. Caso não exista, não é possível atualizar o valor */
-            if ($this->getdeszipcode() != ''){
-                /* Se o CEP for diferente de vazio, passo o CEP presente no objeto do carrinho */
+            $products = $this->getProducts();
+            /* Valores das condições do IF 
+            var_dump($products);
+            echo $this->getdeszipcode();
+            */
+            /* Se o CEP for diferente de vazio e houver produtos no carrinho, passo o CEP presente no objeto do carrinho */
+            if ($this->getdeszipcode() != '' && count($products) > 0){
                 $this->setFreight($this->getdeszipcode());
+            } else {
+                $this->setdeszipcode('');
+                $this->setvlfreight(0);
             }
         }
         /* Método para sobreescrita do método getValues da classe extendida. O objetivo será preencher no carrinho de compra
@@ -380,14 +419,36 @@
             $this->updateFreight();
             /* o getProductsTotals já possui os valores totais das quantidades, soma do preço, etc */
             $totals = $this->getProductsTotals();
-            /* agora adicionamos as informações que não existem dentro do cart */
-            $this->setvlsubtotal($totals['vlprice']);
-            $this->setvltotal($totals['vlprice'] + $this->getvlfreight());
+            /* para verificar as informações do objeto */
+            //var_dump($totals);
+            if ((int)$totals['nrqtd'] > 0){
+                /* agora adicionamos as informações que não existem dentro do cart */
+                $this->setvlsubtotal($totals['vlprice']);
+                $this->setvltotal($totals['vlprice'] + $this->getvlfreight());
+            } else {
+                /* Caso não tenha produtos no carrinho, alteramos as informações para exibir zerado e avisamos ao usuário. */
+                $this->setvlsubtotal(0);
+                $this->setvltotal(0);
+                $this->setnrdays(0);
+                return Cart::setMsgError("Carrinho de Compra não possui itens!");
+            }
         }
         /* Método para zerar o valor do frete e dias de entrega caso o carrinho esteja vazio */
         public function checkZipCode(){
             $products = $this->getProducts();
             if (!count($products) > 0) {
+                /* Caso o carrinho não possua nenhum produto e você queira remover os dados do frete, valor e número de dias do 
+                banco de dados. Essa opção pressupoe que o usuário inseriu alguns produtos, digitou os dados para calcular o frete
+                e depois removeu o produto. Utilizando a configuração abaixo o carrinho viria vazio em uma segunda inserção de dados */
+                /*
+                $sql = new Sql();
+                $sql->query("UPDATE tb_carts 
+                    SET deszipcode = NULL, vlfreight = NULL, nrdays = NULL 
+                    WHERE idcart = :idcart ", [
+                        ':idcart'=>$this->getidcart()
+                    ]
+                );
+                */
                 $this->setdeszipcode('');
                 $this->setvlfreight(0);
             }
