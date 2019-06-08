@@ -171,8 +171,16 @@
     $app->get("/login", function(){
         $page = new Page();
         $page -> setTpl("login", [
-            /* Em caso de erro, passa erro para o template */
-            'error'=>User::getError()
+            /* Em caso de erro, passa erro para o template e as informações já digitadas na sessão afim de evitar que o usuário perca 
+            esses dados, se esses existirem, se não, passo um erray com cada index vazio */
+            'error'=>User::getError(),
+            'errorRegister'=>User::getErrorRegister(),
+            'registerValues'=>(isset($_SESSION['registerValues'])) ? $_SESSION['registerValues'] : [
+                'name'=>'',
+                'email'=>'',
+                'phone'=>''
+                /* por segurança, o password sempre é zerado então não preciso passar o index nesse caso */
+            ]
         ]);
     });
     /* Rota para template da página de login. Essa rota é acionada após preenchimento dos campos email e senha. */
@@ -194,6 +202,56 @@
     $app->get("/logout", function(){
         User::logout();
         header("Location: /login");
+        exit;
+    });
+    /* Rota para criação de novo usuário do site */
+    $app->post("/register", function(){
+        /* Como haverão validações abaixo onde, em caso de problemas, o usuário deverá corrigir os dados, se não capturarmos o que foi 
+        digitado, quando ocorrer o erro o usuário perderá todas as informações. Nesse caso, podemos pegar os dados e coloca-los em uma 
+        sessão antes de realizar as validações: */
+        $_SESSION['registerValues'] = $_POST;
+        /* Antes de criar o usuário no banco de dados, verificamos se o nome NÃO foi definido OU se É vazio */
+        if(!isset($_POST['name']) || $_POST['name'] == ''){
+            User::setErrorRegister("Preencha o seu nome.");
+            header("Location: /login");
+            exit;
+        }
+        /* Antes de criar o usuário no banco de dados, verificamos se o email NÃO foi definido OU se É vazio*/
+        if(!isset($_POST['email']) || $_POST['email'] == ''){
+            User::setErrorRegister("Preencha o seu email.");
+            header("Location: /login");
+            exit;
+        }
+        /* Antes de criar o usuário no banco de dados, verificamos se o password NÃO foi definido OU se É vazio */
+        if(!isset($_POST['password']) || $_POST['password'] == ''){
+            User::setErrorRegister("Preencha a senha.");
+            header("Location: /login");
+            exit;
+        }
+        /* Antes de criar o usuário no banco de dados, verificamos se ele já existe. */
+        if(User::checkLoginExist($_POST['email']) === true){
+            User::setErrorRegister("Este endereço de e-mail já está sendo utilizado por outro usuário.");
+            header("Location: /login");
+            exit;
+        }
+        $user = new User();
+        /* Conforme a segunda coluna do arquivo login.html, dentro do diretorio views, os campos são diferentes dos campos presentes em usuários
+        administradores. Para esse caso, o inadmin será sempre zero. */
+        $user->setData([
+            'inadmin'=>0,
+            /* Como tratamos um usuário do site, utilizamos o e-mail como login */
+            'deslogin'=>$_POST['email'],
+            'desperson'=>$_POST['name'],
+            'desemail'=>$_POST['email'],
+            /* como o método save já faz a criptografia, não é necessário utilizar o método aqui */
+            'despassword'=>$_POST['password'],
+            'nrphone'=>$_POST['phone']
+        ]);
+        $user->save();
+        /* Após salvar o usuário, autenticamos o mesmo e posteriormente redirecionamentos para a tela de checkout. Essa estratégia evita que 
+        o usuário ao ser redirecionado para o checkout seja enviado novamente para a tela de login uma vez que ainda não estará autenticado. */
+        User::login($_POST['email'], $_POST['password']);
+        header('Location: /checkout');
         exit;
     });
 ?>

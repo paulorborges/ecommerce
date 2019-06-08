@@ -432,12 +432,14 @@ class User extends Model{
     }
     /* Método para recuperar a mensagem de erro */
     public static function getErrorRegister(){
+        /* Verifica se o erro foi definido na sessão e se não é vazio */
         $msg = (isset($_SESSION[User::ERROR_REGISTER]) && $_SESSION[User::ERROR_REGISTER]) ? $_SESSION[User::ERROR_REGISTER] : ''; 
         User::clearErrorRegister();
         return $msg;
     }
     /* Método para limpar a mensagem de erro */
     public static function clearErrorRegister(){
+        /* Para limpar o erro, atribuo o valor nulo a constante de erro da sessão. */
         $_SESSION[User::ERROR_REGISTER] = NULL;
     }
     /* Método para verificar se o login existe na base de dados */
@@ -449,6 +451,7 @@ class User extends Model{
                 ':deslogin'=>$login
             ]
         );
+        /* Se identificar que o login já existe, retorna alguma coisa. Caso não exista, retorna false por default */
         return (count($results) > 0);
     }
     /* Método para criptografar senha banco de dados */
