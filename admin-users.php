@@ -106,7 +106,6 @@
         header ("Location: /admin/users");
         exit;
     });
-    
     /* Rota para página de recuperação de senhas */
     $app->get("/admin/forgot", function(){
         $page = new PageAdmin([
@@ -129,7 +128,6 @@
         header("Location: /admin/forgot/sent");
         exit;
     });
-
     /* Roda para página de confirmçaõ do envio/recuperação de senha */
     $app->get("/admin/forgot/sent", function(){
         $page = new PageAdmin([
@@ -155,7 +153,6 @@
             "code"=>$_GET["code"]
         ));
     });
-
     $app->post("/admin/forgot/reset", function(){
         /* Método validForgotDecrypt retorna os dados do usuário em questão para a variável $user. Necessário validar
         pela segunda vez em função da possibilidade de um hacker tentar invadir a segunda página e não a primeira

@@ -254,4 +254,71 @@
         header('Location: /checkout');
         exit;
     });
+    /* Rota para página de recuperação de senhas */
+    $app->get("/forgot", function(){
+        $page = new Page();
+        //adiciona arquivo com conteúdo da página forgot!
+        $page->setTpl("forgot");
+    });
+    /* Rota para página de recuperação de senhas */
+    $app->post("/forgot", function(){
+        /* após digitação do endereço, vamos capturar o email digitado, verificar se o mesmo existe no banco de dados e 
+        enviar um link para que o usuário, dentro de um período pré-determinado, consiga realizar os processos de recuperação
+        da senha. O link, além de possuir um tempo de validada, poderá ser utilizado uma única vez com a chave em questão. 
+        Caso seja necessário alterar novamente a senha, será gerado um novo link com uma nova chave. Na página forgot.html pode
+        ser verificado que o forgot, além de ser enviado via post, possui um campo com nome email. Vamos utilizar o método 
+        getForgot da classe User e o retorno do método é guardado na variável user.*/
+        /* Como esse método deve recuperar a senha de um  usuário normal e não de um usuário da administração, devemos forçar 
+        o inadmin como false */
+        $user = User::getForgot($_POST["email"], false);
+        /* Redirect para confirmar para o usuário que o email foi enviado com sucesso */
+        header("Location: /forgot/sent");
+        exit;
+    });
+    /* Roda para página de confirmçaõ do envio/recuperação de senha */
+    $app->get("/forgot/sent", function(){
+        $page = new Page();
+        //adiciona arquivo com conteúdo da página forgot!
+        $page->setTpl("forgot-sent");
+    });
+    /* Rota referente ao botão redefinir senha, presente no e-mail que é enviado ao usuário */
+    $app->get("/forgot/reset", function(){
+        /* Método validForgotDecrypt retorna os dados do usuário em questão para a variável $user*/
+        $user = User::validForgotDecrypt($_GET["code"]);
+
+        $page = new Page();
+        /*adiciona arquivo com conteúdo da página forgot! Passando duas variáveis conforme necessário para o
+        template em questão*/
+        $page->setTpl("forgot-reset", array(
+            "name"=>$user["desperson"],
+            "code"=>$_GET["code"]
+        ));
+    });
+    $app->post("/forgot/reset", function(){
+        /* Método validForgotDecrypt retorna os dados do usuário em questão para a variável $user. Necessário validar
+        pela segunda vez em função da possibilidade de um hacker tentar invadir a segunda página e não a primeira
+        conforme método get */
+        $forgot = User::validForgotDecrypt($_POST["code"]);
+        /* Para evitar que o método de recuperação e alteração de senha seja utilizado mais de uma vez, necessário
+        gravar no banco de dados que a chave em questão já foi utilizada. Isso ocorre pelo campo dtrecovery. Dessa forma,
+        necessário criar o método setForgotUsed. */
+        User::setForgotUsed($forgot["idrecovery"]);
+        /* Para trocar a senha de fato, necessário carregar o usuário conforme abaixo */
+        $user = new User();
+        $user -> get((int)$forgot["iduser"]);
+        /* Para criptografar o password, a função a seguir pode ser utilizada. Importante verificar outros métodos e
+        funcionalidades na documentação do php */
+        $password = password_hash($_POST["password"], PASSWORD_DEFAULT,[
+            "cost"=>12
+        ]);
+        /* Existe o método despassword e o metodo save. Nesse caso porém é necessário criar um novo método uma vez que é 
+        necessário utilizar o novo hash da senha escolhida antes de salvar no banco de dados. No tamplate forgot-reset o nome
+        do camo em questão é password, portanto, via post, vamos pegar o conteúdo desse campo para enviar como parâmetro.*/ 
+        $user -> setPassword($password);
+
+        $page = new Page();
+        /*adiciona arquivo com conteúdo da página forgot! Passando duas variáveis conforme necessário para o
+        template em questão*/
+        $page->setTpl("forgot-reset-success");
+    });
 ?>

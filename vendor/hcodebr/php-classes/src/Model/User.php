@@ -233,7 +233,7 @@ class User extends Model{
 
     }
     /* Método para recuperação de senha */
-    public static function getForgot($email){
+    public static function getForgot($email, $inadmin = true){
         /* Verificar se o e-mail está cadastrado no banco de dados */
         $sql = new Sql();
         $results = $sql->select(
@@ -301,14 +301,22 @@ class User extends Model{
                     /* segunda chave a ser encriptada */
                     User::SECRET_IV
                 ));
+                /* Teste de objetos e conteúdos */
                 //echo $code;
                 //$string = openssl_decrypt($openssl, 'AES-128-CBC', SECRET, 0, SECRET_IV);
                 //echo "<br>";
                 //var_dump(json_decode($string, true));
-                /* Após criptografado, necessário montar o link */
-                $link = "http://www.hcodecommerce.com.br/admin/forgot/reset?code=$code";
-                //echo $link;
 
+                /* Para enviar o link, deve-se analisar se o usuário é da administração ou se é um usuário normal da loja */
+                if($inadmin === true ){
+                    /* Após criptografado, necessário montar o link. Nesse caso, link de usuário admin. */
+                    $link = "http://www.hcodecommerce.com.br/admin/forgot/reset?code=$code";
+                    //echo $link;
+                } else {
+                    /* Após criptografado, necessário montar o link. Nesse caso, link de usuário comum. */
+                    $link = "http://www.hcodecommerce.com.br/forgot/reset?code=$code";
+                    //echo $link;
+                }
                 $subj = "Redefinir senha da Frisa Comunicacao";
                 $mailer = new Mailer(
                     /* email para recuperação da senha. Endereco de destino. */

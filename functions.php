@@ -4,7 +4,11 @@
 
     /* Método para formatar o preço em reais. Sem o método, os preços seriam exibidos com ponto para separação dos
     centavos e não com a vírgrula */
-    function formatPrice(float $vlprice){
+    /* Como na primeira vez que você entra no carrinho o valor pode ser zero, essa função acaba mostrando um erro. Para evitar, vamos remover
+    o casting do valor e verificar se o mesmo contem um valor maior que zero. Caso não tenha, definimos como zero. */
+    //function formatPrice(float $vlprice){
+    function formatPrice($vlprice){
+        if (!$vlprice > 0) $vlprice = 0;
         return number_format($vlprice, 2, ",", ".");
     }
     /* Método utilizado nesse local para permitir a utilização da mesma em escopo global. Ela recebe o inadmin como true e passa essa
