@@ -12,6 +12,9 @@ class User extends Model{
     /* constante para chave de criptografia */
     const SECRET    = "HcodePHP7_Secret"; //16 caracteres
     const SECRET_IV = "FrisaComunicacao"; //16 caracteres
+    /* Constantes para tratamento das mensagens de erro */
+    const ERROR = "UserError";
+    const ERROR_REGISTER = "UserErrorRegister";
 
     /* Como o usuário já está inserido na sessão atraves do User::SESSION, podemos criar um método para 
     retornar o usuário logado sempre que outras classes precisarem */
@@ -36,18 +39,23 @@ class User extends Model{
         for, provavelmente, possui um id de usuário inválido. Como o acesso em questão é feito contra a página de administração
         o parámetro inadmin = true verifica se o usuário em questão, mesmo sendo válido, pertence realmente à administração do site.
         Para todos os demais, redirecionar para página de login. */
-        if(!isset ($_SESSION[User::SESSION])
-           ||
-           !$_SESSION[User::SESSION]
-           ||
-           !(int)$_SESSION[User::SESSION]["iduser"]>0){
+        if(
+            !isset($_SESSION[User::SESSION])
+            ||
+            !$_SESSION[User::SESSION]
+            ||
+            !(int)$_SESSION[User::SESSION]["iduser"]>0
+        ){
             // Não está logado
             return false;
         } else {
-            /* Ele está logado mas pode acessar a sessão de admin? Na tabela de usuário existe um parâmetro que fala
-            se o usuário é administrador ou não mas além disso precisamos entender, se ele tem a permissão e se ele quer
-            utilizar a sessão administrativa ou apenas a loja. O if abaixo só ocorre se a rota acessada for de 
-            administrador */
+            /* A sessão existe, ela foi definida, ele está logado mas pode acessar a sessão de admin? Na tabela de usuário existe um 
+            parâmetro que fala se o usuário é administrador ou não mas além disso precisamos entender, se ele tem a permissão e se 
+            ele quer utilizar a sessão administrativa ou apenas a loja. O if abaixo só ocorre se a rota acessada for de administrador.
+            Basicamente o primeiro if verifica se o inadmin do usuário é true e se a rota que ele está utilizando é de administração.
+            Caso sim, ok, ele está logado e retorna true. O else if verifica se é um usuário da administração e para o caso de não ser, já
+            retorna como verdadeiro sem nem precisar verificar a rota utilizada, dessa forma ele pode verificar a parte de cliente uma 
+            vez que ele já está logado. O else final retorna false uma vez que o usuário não está logado. */
             if($inadmin === true && (bool)$_SESSION[User::SESSION]['inadmin'] === true){
                 return true;
             } else if ($inadmin === false){
@@ -62,9 +70,21 @@ class User extends Model{
 
     public static function login($login,$password){
         $sql = new Sql();
+        /* objeto substituído por outro com a vinculação da tabela de usuário com a tabela de pessoas */
+        /*
         $results = $sql->select("SELECT * FROM tb_users WHERE deslogin = :LOGIN", array(
             ":LOGIN"=>$login
         ));
+        */
+        $results = $sql->select("SELECT * 
+            FROM tb_users a
+            INNER JOIN tb_persons b 
+            ON a.idperson = b.idperson 
+            WHERE a.deslogin = :LOGIN", array(
+                ":LOGIN"=>$login
+            )
+        );
+        
         /* para verificar se o login acima foi identificado no banco de dados, pode ser verificar 
         se o contador = a 1 por exemplo, o que seria um retorno positivo para o método de verificação acima*/
         if (count($results)===0){
@@ -78,6 +98,9 @@ class User extends Model{
         /* a função password_verify verifica se o hash da senha bate com o que foi digitado pelo usuário e retorno true ou false */
         if (password_verify($password, $data["despassword"]) === true){
             $user = new User();
+            /* Função utilizada para correção de acentuação em caso dos dados estarem em formato utf8. Encode utilizado sempre que
+            buscamos alguma informação do banco. decode sempre que levamos alguma informação para o banco. */
+            $data['desperson'] = utf8_encode($data['desperson']);
             /* para realizar um teste se a classe model está pegando corretamente os valores do método */
             //$user->setiduser($data["iduser"]);
             /* o setiduser acima, no formato que foi construído, pega campo a campo e seria necessário muitos códigos para
@@ -126,8 +149,12 @@ class User extends Model{
             exit;
         }
         */
-        if(User::checkLogin($inadmin)){
-            header("Location: /admin/login");
+        if(!User::checkLogin($inadmin)){
+            if($inadmin){
+                header("Location: /admin/login");
+            } else {
+                header("Location: /login");
+            }
             exit;
         }
     }
@@ -147,9 +174,11 @@ class User extends Model{
         $sql = new Sql();
         /* chamada da procedure. os campos devem ser enviados na mesma ordem da procedure */
         $results = $sql->select("CALL sp_users_save(:desperson, :deslogin, :despassword, :desemail, :nrphone, :inadmin)", array(
-            ":desperson"=>$this->getdesperson(),
+            /* Função utilizada para correção de acentuação em caso dos dados estarem em formato utf8. Encode utilizado sempre que
+            buscamos alguma informação do banco. decode sempre que levamos alguma informação para o banco. */
+            ":desperson"=>utf8_decode($this->getdesperson()),
             ":deslogin"=>$this->getdeslogin(),
-            ":despassword"=>$this->getdespassword(),
+            ":despassword"=>User::getPasswordHash($this->getdespassword()),
             ":desemail"=>$this->getdesemail(),
             ":nrphone"=>$this->getnrphone(),
             ":inadmin"=>$this->getinadmin()
@@ -161,11 +190,20 @@ class User extends Model{
     /* Método para capturar todos os elementos de um usuário conforme seu ID. */
     public function get($iduser){
         $sql = new Sql();
-        $results = $sql->select("SELECT * FROM tb_users a INNER JOIN tb_persons b USING (idperson) WHERE a.iduser = :iduser", array(
-            ":iduser" => $iduser
-        ));
+        $results = $sql->select("SELECT * 
+            FROM tb_users a 
+            INNER JOIN tb_persons b 
+            USING(idperson) 
+            WHERE a.iduser = :iduser", array(
+                ":iduser" => $iduser
+            )
+        );
+        $data = $results[0];
+        /* Função utilizada para correção de acentuação em caso dos dados estarem em formato utf8. Encode utilizado sempre que
+        buscamos alguma informação do banco. decode sempre que levamos alguma informação para o banco. */
+        $data['desperson'] = utf8_encode($data['desperson']);
         /* Como o objeto results recebe um array em seu retorno, necessário enviar par ao setData apenas a posição zero. */
-        $this->setData($results[0]);
+        $this->setData($data);
     }
     /* Método para alteração dos dados */
     public function update(){
@@ -173,9 +211,11 @@ class User extends Model{
         /* chamada da procedure. os campos devem ser enviados na mesma ordem da procedure */
         $results = $sql->select("CALL sp_usersupdate_save(:iduser, :desperson, :deslogin, :despassword, :desemail, :nrphone, :inadmin)", array(
             ":iduser"=>$this->getiduser(),
-            ":desperson"=>$this->getdesperson(),
+            /* Função utilizada para correção de acentuação em caso dos dados estarem em formato utf8. Encode utilizado sempre que
+            buscamos alguma informação do banco. decode sempre que levamos alguma informação para o banco. */
+            ":desperson"=>utf8_decode($this->getdesperson()),
             ":deslogin"=>$this->getdeslogin(),
-            ":despassword"=>$this->getdespassword(),
+            ":despassword"=>User::getPasswordHash($this->getdespassword()),
             ":desemail"=>$this->getdesemail(),
             ":nrphone"=>$this->getnrphone(),
             ":inadmin"=>$this->getinadmin()
@@ -367,9 +407,57 @@ class User extends Model{
                     WHERE iduser = :iduser", 
                     array(
                         ":password"=>$password,
-                        "iduser"=>$this->getiduser()
+                        ":iduser"=>$this->getiduser()
                     )
-                );
+        );
+    }
+    /* Método para setar a mensagem de erro */
+    public static function setError($msg){
+        $_SESSION[User::ERROR] = $msg;
+    }
+    /* Método para recuperar a mensagem de erro */
+    public static function getError(){
+        /* Verifica se a sessão foi definida e se possui algum conteúdo */
+        $msg = (isset($_SESSION[User::ERROR]) && $_SESSION[User::ERROR]) ? $_SESSION[User::ERROR] : '';
+        User::clearError();
+        return $msg;
+    }
+    /* Método para limpar a mensagem de erro */
+    public static function clearError(){
+        $_SESSION[User::ERROR] = NULL;    
+    }
+    /* Método para atribuir a mensagem de erro */
+    public static function setErrorRegister($msg){
+        $_SESSION[User::ERROR_REGISTER] = $msg;    
+    }
+    /* Método para recuperar a mensagem de erro */
+    public static function getErrorRegister(){
+        $msg = (isset($_SESSION[User::ERROR_REGISTER]) && $_SESSION[User::ERROR_REGISTER]) ? $_SESSION[User::ERROR_REGISTER] : ''; 
+        User::clearErrorRegister();
+        return $msg;
+    }
+    /* Método para limpar a mensagem de erro */
+    public static function clearErrorRegister(){
+        $_SESSION[User::ERROR_REGISTER] = NULL;
+    }
+    /* Método para verificar se o login existe na base de dados */
+    public static function checkLoginExist($login){
+        $sql = new Sql();
+        $results = $sql->select("SELECT *
+            FROM tb_users 
+            WHERE deslogin = :deslogin", [
+                ':deslogin'=>$login
+            ]
+        );
+        return (count($results) > 0);
+    }
+    /* Método para criptografar senha banco de dados */
+    public static function getPasswordHash($password){
+        /* assim como na função esqueci a senha, este método recebe a senha como parametro e utiliza a classe de criptografia
+        do PHP para converter a senha em um código hash com processamento 12. */
+        return password_hash($password, PASSWORD_DEFAULT, [
+            'cost'=>12
+        ]);
     }
 }
 

@@ -4,6 +4,8 @@
     use \Hcode\Model\Products;
     use \Hcode\Model\Category;
     use \Hcode\Model\Cart;
+    use \Hcode\Model\Address;
+    use \Hcode\Model\User;
 
     /* metodo para trabalhar com as rotas */
     $app->get('/', function() {
@@ -148,6 +150,50 @@
         $cart -> setFreight($_POST['zipcode']);
         /* Redireciona para a tela do carrinho */
         header("Location: /cart");
+        exit;
+    });
+    /* Rota para template do checkout. Essa rota é acionada após acesso ao botão finalizar compra, dentro do carrinho de compras.*/
+    $app->get("/checkout", function(){
+        /* Verifica se o usuário está logado no site. Nesse caso, como é uma rota de compra, deve ser passado o parametro como false
+        para que o metódo redirecione corretamente para o ambiente de usuário e senha do site e não da administração */
+        User::verifyLogin(false);
+        /* Pega o carrinho que está na sessão */
+        $cart = Cart::getFromSession();
+        /* Captura o endereço */
+        $address = new Address();
+        $page = new Page();
+        $page -> setTpl("checkout", [
+            'cart'=>$cart->getValues(),
+            'address'=>$address->getValues()
+        ]);
+    });
+    /* Rota para template da página de login. Essa rota é acionada após acesso ao botão finalizar compra, dentro do carrinho de compras.*/
+    $app->get("/login", function(){
+        $page = new Page();
+        $page -> setTpl("login", [
+            /* Em caso de erro, passa erro para o template */
+            'error'=>User::getError()
+        ]);
+    });
+    /* Rota para template da página de login. Essa rota é acionada após preenchimento dos campos email e senha. */
+    $app->post("/login", function(){
+        /* O try catch abaixo verifica se o login vai retornar algum erro, caso não, segue com o código. Caso sim, gera a exception. */
+        try {
+            /* Método login verifica a autencidade do usuário e já cria a sessão do mesmo. */
+            User::login($_POST['login'], $_POST['password']);
+        } catch(Exception $e){
+            /* Para enviar o erro, podemos utilizar os métodos estáticos da classe user conforme abaixo */
+            User::setError($e->getMessage());
+        }
+        
+        /* Se o usuário for verificado na operação anterior, basta redirecionar a navegação para a página de checkout */
+        header("Location: /checkout");
+        exit;
+    });
+    /* Rota para realizar logout */
+    $app->get("/logout", function(){
+        User::logout();
+        header("Location: /login");
         exit;
     });
 ?>

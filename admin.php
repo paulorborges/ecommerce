@@ -3,8 +3,8 @@
     use \Hcode\Model\User;
     use \Hcode\PageAdmin;
    
-    /* metodo para trabalhar com as rota do admin */
-    $app->get('/admin/', function() {
+    /* Metodo para trabalhar com as rota do admin */
+    $app->get('/admin', function() {
         /* Caso o admin seja chamado diretamente, o sistema deve verificar se o usuário está logado (se existe uma sessão válida).
         Apenas nessa condição deve ser exibido os dados.*/
         User::verifyLogin();
@@ -14,7 +14,7 @@
         $page->setTpl("index");
         /* quando chega na última linha do app, o php limpa a memória chamando o destruct e adiciona o footer na página */
     });
-    /* metodo para trabalhar com as rota do login */
+    /* Metodo para trabalhar com as rota do login */
     $app->get('/admin/login', function() {
         /*chama o construct e adiciona o header. Como a página de login não tem um header, footer ou index e vai 
         aproveitar a estrutura da página atual, nesse caso é necessário passar alguns parametros para desabilitar 

@@ -3,7 +3,7 @@
     namespace Hcode\Model;
 
     use \Hcode\Model;
-    use \Hcode\Mailer;
+    //use \Hcode\Mailer;
     use \Hcode\DB\Sql;
     use \Hcode\Model\User;
 
@@ -317,9 +317,10 @@
                 /* para analisar o retorno, pode ser utilizado a função de echo e utilizar o json para análise. Como o resultado está 
                 em formato XML, converte-se para um array */
                 /*
+                var_dump($totals);
                 //var_dump($xml);
                 echo json_encode((array)$xml);
-                exit;
+                //exit;
                 */
                 /* Com o retorno dos dados no objeto xml, podemos setar as informações para que o usuário avalie o valor calculado do frete,
                 prazo de entrega, etc. Importante reparar que o retorno ocorreu encadeado em vários níveis, no formato de árvore, portanto, 
