@@ -1,6 +1,7 @@
 <?php
 
     use \Hcode\Model\User;
+    use \Hcode\Model\Cart;
 
     /* Método para formatar o preço em reais. Sem o método, os preços seriam exibidos com ponto para separação dos
     centavos e não com a vírgrula */
@@ -24,5 +25,17 @@
         exit;
         */
         return $user->getdesperson();
+    }
+    /* Método utilizado para atualizar quantidade de produtos na imagem do carrinho resumido. Canto superior direito de todas as páginas */
+    function getCartNrQtd(){
+        $cart = Cart::getFromSession();
+        $totals = $cart->getProductsTotals();
+        return $totals['nrqtd'];
+    }
+    /* Método utilizado para atualizar o valor de produtos na imagem do carrinho resumido. Canto superior direito de todas as páginas */
+    function getCartVlSubTotal(){
+        $cart = Cart::getFromSession();
+        $totals = $cart->getProductsTotals();
+        return formatPrice($totals['vlprice']);
     }
 ?>

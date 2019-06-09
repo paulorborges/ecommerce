@@ -71,7 +71,12 @@
         public function setToSession(){
             $_SESSION[Cart::SESSION] = $this->getValues();
         }
-
+        /* Metodo para remover o objeto cart na sessão de atual. Como nesse caso vamos utilizar a variável this, o método
+        não pode ser estático */
+        public function removeSession(){
+            $_SESSION[Cart::SESSION] = NULL;
+            session_regenerate_id();
+        }
         /* Método para carregar o id da sessão. Esse método não precisa de parametro uma vez que o PHP possui a função que
         realiza essa ação (sessionID) */
         public function getFromSessionID(){
@@ -248,6 +253,7 @@
         /* Método para calcular o valor do frete */
         public function setFreight($nrzipcode){
             /* Caso o usuário digite o código adicionando o tracinho, devemos remove-lo para evitar problemas com o webservice */
+            //$nrzipcode = "04180112";
             $nrzipcode = str_replace('-','',$nrzipcode);
             /* Verifica as informações totais do carrinho */
             $totals = $this->getProductsTotals();
@@ -333,7 +339,7 @@
                 var_dump($result->MsgErro);
                 exit;
                 */
-                if ($result->MsgErro != '') {
+                if ($result->MsgErro !== '') {
                     /* Se a mensagem de erro é diferente de vazio, passamos a mesma */
                     Cart::setMsgError((string)$result->MsgErro);
                     return false;
@@ -454,5 +460,6 @@
                 $this->setvlfreight(0);
             }
         }
+
     }   
 ?>

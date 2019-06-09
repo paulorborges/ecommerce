@@ -12,9 +12,10 @@ class User extends Model{
     /* constante para chave de criptografia */
     const SECRET    = "HcodePHP7_Secret"; //16 caracteres
     const SECRET_IV = "FrisaComunicacao"; //16 caracteres
-    /* Constantes para tratamento das mensagens de erro */
+    /* Constantes para tratamento das mensagens de erro e sucesso*/
     const ERROR = "UserError";
     const ERROR_REGISTER = "UserErrorRegister";
+    const SUCCESS = "UserSuccess";
 
     /* Como o usuário já está inserido na sessão atraves do User::SESSION, podemos criar um método para 
     retornar o usuário logado sempre que outras classes precisarem */
@@ -162,6 +163,11 @@ class User extends Model{
     public static function logout(){
         /* Em caso de haver mais sessions rodando, pode ser chamado o destroy apenas para a session de usuario */
         $_SESSION[User::SESSION] = NULL;
+        $_SESSION['registerValues'] = [
+            'name'=>'',
+            'email'=>'',
+            'phone'=>''
+        ];
     }
 
     /* Método para listar os usuários */
@@ -215,7 +221,10 @@ class User extends Model{
             buscamos alguma informação do banco. decode sempre que levamos alguma informação para o banco. */
             ":desperson"=>utf8_decode($this->getdesperson()),
             ":deslogin"=>$this->getdeslogin(),
-            ":despassword"=>User::getPasswordHash($this->getdespassword()),
+            /* Para a operação de alteração da senha não podemos criptografar novamente, senão a ferramenta iria criptografar a senha já
+            criptografada em caso de não alteração da mesma */
+            //":despassword"=>User::getPasswordHash($this->getdespassword()),
+            ":despassword"=>$this->getdespassword(),
             ":desemail"=>$this->getdesemail(),
             ":nrphone"=>$this->getnrphone(),
             ":inadmin"=>$this->getinadmin()
@@ -434,6 +443,21 @@ class User extends Model{
     public static function clearError(){
         $_SESSION[User::ERROR] = NULL;    
     }
+    /* Método para setar uma mensagem */
+    public static function setSuccess($msg){
+        $_SESSION[User::SUCCESS] = $msg;
+    }
+    /* Método para recuperar a mensagem */
+    public static function getSuccess(){
+        /* Verifica se a sessão foi definida e se possui algum conteúdo */
+        $msg = (isset($_SESSION[User::SUCCESS]) && $_SESSION[User::SUCCESS]) ? $_SESSION[User::SUCCESS] : '';
+        User::clearSuccess();
+        return $msg;
+    }
+    /* Método para limpar a mensagem */
+    public static function clearSuccess(){
+        $_SESSION[User::SUCCESS] = NULL;    
+    }
     /* Método para atribuir a mensagem de erro */
     public static function setErrorRegister($msg){
         $_SESSION[User::ERROR_REGISTER] = $msg;    
@@ -469,6 +493,33 @@ class User extends Model{
         return password_hash($password, PASSWORD_DEFAULT, [
             'cost'=>12
         ]);
+    }
+    /* Método para retornar os pedidos de determinado usuário */
+    public function getOrders(){
+        $sql = new Sql();
+        $results = $sql -> select("SELECT *
+            FROM tb_orders a
+            INNER JOIN tb_ordersstatus b
+            /* USING é utilizado apenas com mysql, se for SQLServer, utilizar o ON */
+            USING (idstatus) 
+            INNER JOIN tb_carts c
+            USING (idcart)
+            INNER JOIN tb_users d
+            ON d.iduser = a.iduser 
+            INNER JOIN tb_addresses e
+            USING (idaddress)
+            INNER JOIN tb_persons f
+            ON f.idperson = d.idperson
+            WHERE a.iduser = :iduser
+            ",[
+                ':iduser'=>$this->getiduser()
+            ]
+        );
+        if (count($results) > 0){
+            return $results;
+        } else {
+            return NULL;
+        }
     }
 }
 
