@@ -80,27 +80,6 @@
             'categories'=>$product->getCategories()
         ]);
     });
-    /* Rota para template do carrinho de compras */
-    $app->get("/cart", function(){
-        /* Verifica se já existe um carrinho de compras setado, quais os produtos e caso não exista, cria um novo 
-        carrinho */
-        $cart = Cart::getFromSession();
-        /* Verifica se o carrinho de compras possui itens */
-        $cart->checkZipCode();
-
-        $page = new Page();
-        /* Para verificar as informações presentes no carrinho, pode ser utilizado o var-dump conforme abaixo */
-        /*
-        var_dump($cart->getValues());
-        exit;
-        */
-        /* Além de indicar a rota, passa-se os parametros do carrinho, produtos, usuários, etc */
-        $page -> setTpl("cart", [
-            'cart'=>$cart->getValues(),
-            'products'=>$cart->getProducts(),
-            'error'=>Cart::getMsgError()
-        ]);
-    });
     /* Rota para template do método de adicionar produtos ao carrinho de compras */
     $app->get("/cart/:idproduct/add", function($idproduct){
         $product = new Products();
@@ -153,6 +132,27 @@
         /* Redireciona para a tela do carrinho */
         header("Location: /cart");
         exit;
+    });
+    /* Rota para template do carrinho de compras */
+    $app->get("/cart", function(){
+        /* Verifica se já existe um carrinho de compras setado, quais os produtos e caso não exista, cria um novo 
+        carrinho */
+        $cart = Cart::getFromSession();
+        /* Verifica se o carrinho de compras possui itens */
+        $cart->checkZipCode();
+
+        $page = new Page();
+        /* Para verificar as informações presentes no carrinho, pode ser utilizado o var-dump conforme abaixo */
+        /*
+        var_dump($cart->getValues());
+        exit;
+        */
+        /* Além de indicar a rota, passa-se os parametros do carrinho, produtos, usuários, etc */
+        $page -> setTpl("cart", [
+            'cart'=>$cart->getValues(),
+            'products'=>$cart->getProducts(),
+            'error'=>Cart::getMsgError()
+        ]);
     });
     /* Rota para template do checkout. Essa rota é acionada após acesso ao botão finalizar compra, dentro do carrinho de compras.*/
     $app->get("/checkout", function(){
@@ -319,6 +319,14 @@
     /* Rota para realizar logout */
     $app->get("/logout", function(){
         User::logout();
+        /* Em uma das perguntas da aula 125 foi informado sobre o problema de que, quando se altera de um usuário para outro
+        o carrinho do usuário anterior continua na sessão. No retorno foi sugerido criar um novo metodo, estático, e utilizá-lo
+        da seguinte forma:
+        Cart::removeFromSession();
+        session_regenerate_id();
+        Creio que podemos utilizar no entanto outro método, removeSession já existente, da seguinte forma. */
+        $cart = new Cart();
+        $cart -> removeSession();
         header("Location: /login");
         exit;
     });
@@ -648,5 +656,73 @@
             'cart'=>$cart->getValues(),
             'products'=>$cart->getProducts()
         ]);
+    });
+    /* Rota para alterar a senha. Diferente da função esqueci a senha, esse ambiente permite que o usuário modifique a senha em ambiente
+    visual */
+    $app->get("/profile/change-password", function(){
+        /* Verifica se o usuário está logado no site. Nesse caso, como é uma rota de compra, deve ser passado o parametro como false
+        para que o metódo redirecione corretamente para o ambiente de usuário e senha do site e não da administração */
+        User::verifyLogin(false);
+
+        $page = new Page();
+        $page->setTpl("profile-change-password",[
+            'changePassSuccess'=>User::getSuccess(),
+            'changePassError'=>User::getError()
+        ]);
+    });
+    /* Rota para alterar a senha após digitação dos novos dados */
+    $app->post("/profile/change-password", function(){
+        /* Verifica se o usuário está logado no site. Nesse caso, como é uma rota de compra, deve ser passado o parametro como false
+        para que o metódo redirecione corretamente para o ambiente de usuário e senha do site e não da administração */
+        User::verifyLogin(false);
+        /* Verificamos se ele digitou a senha atual, se ele não foi definido ou se é vazio */
+        if (!isset($_POST['current_pass']) || $_POST['current_pass'] === ''){
+            User::setError("Digite a senha atual.");
+            header("Location: /profile/change-password");
+            exit;
+        }
+        /* Verificamos se ele digitou alguma informação no campo nova senha, se ele não foi definido ou se é vazio */
+        if (!isset($_POST['new_pass']) || $_POST['new_pass'] === ''){
+            User::setError("Digite a nova senha.");
+            header("Location: /profile/change-password");
+            exit;
+        }
+        /* Verificamos se ele digitou alguma informação no campo confirme nova senha, se ele não foi definido ou se é vazio */
+        if (!isset($_POST['new_pass_confirm']) || $_POST['new_pass_confirm'] === ''){
+            User::setError("Confirme a nova senha.");
+            header("Location: /profile/change-password");
+            exit;
+        }
+        /* Verificamros se a senha digitada no campo nova senha é igual a senha digitada no campo de confirmação. */
+        if ($_POST['new_pass'] !== $_POST['new_pass_confirm']) {
+            User::setError("A nova senha difere da senha de confirmação.");
+            header("Location: /profile/change-password");
+            exit;
+        }
+        /* Verificamros se a nova senha digitada é igual a senha atual, dessa forma evitamos que o usuário continue com a mesma
+        senha. */
+        if ($_POST['current_pass'] === $_POST['new_pass']){
+            User::setError("A nova senha precisa ser diferente da senha atual.");
+            header("Location: /profile/change-password");
+            exit;
+        }
+        /* Verificamros se a senha atual do usuário está correta. Essa validação evita do usuário esquecer de fazer logoff e outra 
+        pessoal alterar sua senha. */
+        $user = User::getFromSession();
+        if (!password_verify($_POST['current_pass'], $user->getdespassword())) {
+            User::setError("Senha atual inválida.");
+            header("Location: /profile/change-password");
+            exit;
+        }
+        /* Após as validações anteriores, basta alterar a senha.*/
+        /* Como o metodo update foi alterado para não fazer o rash, chamamos o método diretamente conforma abaixo */
+        //$user->setdespassword($_POST['new_pass']);
+        $user->setdespassword(User::getPasswordHash($_POST['new_pass']));
+        $user->update();
+
+        /* Após salvar a senha, avisamos o usuário sobre a realização do procedimento. */
+        User::setSuccess("Senha alternada com sucesso!");
+        header("Location: /profile/change-password");
+        exit;
     });
 ?>

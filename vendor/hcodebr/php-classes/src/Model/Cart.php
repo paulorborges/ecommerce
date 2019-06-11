@@ -77,6 +77,13 @@
             $_SESSION[Cart::SESSION] = NULL;
             session_regenerate_id();
         }
+        /* Método estático para remover itens do carrinho quando houver o logoff do usuário por exemplo */
+        public static function removeFromSession(){
+            $_SESSION[Cart::SESSION] = NULL;
+            /* A opção abaixo não foi sugerida na pergunta relativa ao problema do carrinho do primeiro usuário aparecer para o segundo
+            usuário, aula 125, conforme implementação na rota get /logout do site.php*/
+            //session_regenerate_id();
+        }
         /* Método para carregar o id da sessão. Esse método não precisa de parametro uma vez que o PHP possui a função que
         realiza essa ação (sessionID) */
         public function getFromSessionID(){
@@ -256,7 +263,17 @@
             //$nrzipcode = "04180112";
             $nrzipcode = str_replace('-','',$nrzipcode);
             /* Verifica as informações totais do carrinho */
+            /* verifica se houve a passagem do cep */
+            /* 
+            echo $nrzipcode;
+            exit;
+            */
             $totals = $this->getProductsTotals();
+            /* verifica se foi possível pegar o total dos produtos */
+            /*
+            var_dump ($totals);
+            exit;
+            */
             /* Verifica se existe alguma informação no carrinho */
             if($totals['nrqtd'] > 0){
                 /* Os cálculos abaixo foram realizados apenas para testes. Lembrar que com mais de um objeto, pode ser necessário somar
@@ -335,17 +352,26 @@
                 /* Para exibir alguma possível mensagem de erro que ainda não foi tratada no campo reservado para essa finalidade, podemos
                 verificar se a mensagem de erro é diferente de vazio e exibí-la para melhor análise */
                 /* Teste do objeto mensagem */
-                /*
-                var_dump($result->MsgErro);
+                /*               
+                //var_dump($result->MsgErro);
+                var_dump($result);
                 exit;
                 */
-                if ($result->MsgErro !== '') {
+                if ($result->MsgErro != '') {
                     /* Se a mensagem de erro é diferente de vazio, passamos a mesma */
                     Cart::setMsgError((string)$result->MsgErro);
                     return false;
                 } else {
                     /* Se não houve mensagem de erro, podemos limpar a sessão de erro */
                     Cart::clearMsgError();
+                    /* Verifica as informações do objeto Cart */
+                    /*
+                    var_dump ($result->MsgErro);
+                    var_dump (setnrdays($result->PrazoEntrega));
+                    var_dump (Cart::formatValueToDecimal($result->Valor));
+                    var_dump (setdeszipcode($nrzipcode));
+                    exit;
+                    */
                     /* Para inserir a informação do prazo de entrega no objeto, segue abaixo */
                     $this->setnrdays($result->PrazoEntrega);
                     /* O retorno do correio manda o valor no formato brasileiro mas no banco de dados salvamos no formato americado, portanto, 

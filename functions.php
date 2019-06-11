@@ -12,6 +12,11 @@
         if (!$vlprice > 0) $vlprice = 0;
         return number_format($vlprice, 2, ",", ".");
     }
+    /* Método para formatar a data e exibir corretamente as informações */
+    function formatDate ($date){
+        /* Como a data vem no formato Y/m/d, a função strtotime receber um timestamping e formata como quisermos */
+        return date('d/m/Y', strtotime($date));
+    }
     /* Método utilizado nesse local para permitir a utilização da mesma em escopo global. Ela recebe o inadmin como true e passa essa
     informação para o método checkLogin da classe User. */
     function checkLogin($inadmin = true){
